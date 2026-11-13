@@ -1,5 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { AuthModal } from './components/auth/AuthModal';
 import { ArenaNavbar } from './components/layout/ArenaNavbar';
 import { ArenaLobbyPage } from './pages/ArenaLobbyPage';
 import { BattleRoomPage } from './pages/BattleRoomPage';
@@ -12,8 +14,9 @@ import { TournamentBracketPage } from './pages/TournamentBracketPage';
 
 export function App() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      <Routes>
+    <AuthProvider>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+        <Routes>
         {/* Main Lobby */}
         <Route
           path="/"
@@ -107,7 +110,9 @@ export function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <AuthModal />
     </div>
+  </AuthProvider>
   );
 }
 

@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Terminal, Trophy, ExternalLink, Layers, ArrowUpRight } from 'lucide-react';
+import { Terminal, Trophy, ArrowUpRight, LogOut, User as UserIcon, Eye } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export function ArenaNavbar() {
   const location = useLocation();
+  const { user, isAuthenticated, openAuthModal, logout, getSpectatorQuota } = useAuth();
+  const spectatorQuota = getSpectatorQuota();
 
   const navItems = [
     { label: 'Duels & Lobby', path: '/' },
@@ -49,23 +52,85 @@ export function ArenaNavbar() {
         </div>
 
         {/* Right Utilities */}
-        <div className="flex items-center gap-3">
-          {/* Status Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-2 py-0.5 rounded bg-zinc-900/60 border border-zinc-800 text-[11px] font-mono text-zinc-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Judge0 VM : Online</span>
-          </div>
+        <div className="flex items-center gap-2.5">
+          {/* Spectator Quota Badge for Guests */}
+          {!isAuthenticated && !spectatorQuota.isUnlimited && (
+            <div
+              onClick={() => openAuthModal({
+                mode: 'signin',
+                title: 'Guest Spectator Pass',
+                message: `You have ${spectatorQuota.remaining} of 3 free spectator previews remaining. Sign in for unlimited access.`
+              })}
+              className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900/80 border border-zinc-800 text-[11px] font-mono text-zinc-400 hover:text-zinc-300 hover:border-zinc-700 cursor-pointer transition-colors"
+              title="Click to sign in for unlimited spectator access"
+            >
+              <Eye className="w-3 h-3 text-zinc-500" />
+              <span>Spectator: <strong className="text-zinc-200">{spectatorQuota.remaining}/3</strong></span>
+            </div>
+          )}
 
           {/* Training Deck Link */}
           <a
             href="https://student.flashedu.in"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 border border-zinc-800 transition-colors"
+            className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 border border-zinc-800 transition-colors"
           >
             <span>Student Portal</span>
             <ArrowUpRight className="w-3 h-3 text-zinc-500" />
           </a>
+
+          {/* Authentication State */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              {/* Rating ELO Badge */}
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+                <Trophy className="w-3 h-3 text-amber-400" />
+                <span className="font-semibold text-zinc-200">{user?.rating || 1200}</span>
+                <span className="text-zinc-500 text-[10px]">ELO</span>
+              </div>
+
+              {/* User Pill */}
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-200">
+                <div className="w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-300 overflow-hidden">
+                  {user?.avatar || user?.profileImageUrl ? (
+                    <img src={user.avatar || user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{(user?.name || 'G')[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <span className="max-w-[100px] truncate hidden sm:inline">{user?.name || 'Gladiator'}</span>
+              </div>
+
+              {/* Logout Button */}
+              <button
+                type="button"
+                onClick={logout}
+                title="Log out"
+                className="p-1.5 rounded text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer"
+                aria-label="Log out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => openAuthModal({ mode: 'signin' })}
+                className="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => openAuthModal({ mode: 'signup' })}
+                className="px-2.5 py-1 rounded bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Join Arena
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

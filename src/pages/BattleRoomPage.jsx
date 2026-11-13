@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { arenaApi } from '../api/arenaApi';
+import { useAuth } from '../context/AuthContext';
 import { BattleHUD } from '../components/battle/BattleHUD';
 import { CodeEditor } from '../components/battle/CodeEditor';
 import { VictoryModal } from '../components/battle/VictoryModal';
@@ -17,6 +18,7 @@ import {
 export function BattleRoomPage() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
+  const { user, isAuthenticated, canSpectateMatch, openAuthModal } = useAuth();
 
   const [match, setMatch] = useState(null);
   const [problem, setProblem] = useState(null);
@@ -37,23 +39,13 @@ export function BattleRoomPage() {
 
   // 1. Guest Spectator Policy: 3 Matches Max Per Device
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('arena_spectated_matches') || '[]');
-      const isAlreadyRecorded = stored.includes(roomCode);
-      const isUserAuthenticated = Boolean(localStorage.getItem('arena_token') || document.cookie.includes('token'));
-
-      if (!isUserAuthenticated && !isAlreadyRecorded) {
-        if (stored.length >= 3) {
-          setIsSpectatorGated(true);
-        } else {
-          stored.push(roomCode);
-          localStorage.setItem('arena_spectated_matches', JSON.stringify(stored));
-        }
-      }
-    } catch (e) {
-      // Ignore storage errors
+    if (isAuthenticated) {
+      setIsSpectatorGated(false);
+      return;
     }
-  }, [roomCode]);
+    const allowed = canSpectateMatch(roomCode);
+    setIsSpectatorGated(!allowed);
+  }, [roomCode, isAuthenticated, canSpectateMatch]);
 
   // 2. Fetch Initial Match State
   useEffect(() => {
@@ -201,16 +193,21 @@ export function BattleRoomPage() {
           <div className="pt-2 flex gap-2 justify-center">
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors"
+              className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors cursor-pointer"
             >
               Return to Lobby
             </button>
-            <a
-              href="https://student.flashedu.in/login"
-              className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors"
+            <button
+              type="button"
+              onClick={() => openAuthModal({
+                mode: 'signin',
+                title: 'Sign In to Arena',
+                message: 'Sign in or create a free account to unlock unlimited spectator access and join the live arena.'
+              })}
+              className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors cursor-pointer"
             >
-              Sign In Free
-            </a>
+              Sign In to Watch
+            </button>
           </div>
         </div>
       </div>

@@ -23,6 +23,25 @@ async function arenaRequest(endpoint, options = {}) {
 }
 
 export const arenaApi = {
+  // Authentication & Session
+  login: (credentials) =>
+    arenaRequest('/api/arena/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+
+  register: (userData) =>
+    arenaRequest('/api/arena/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
+
+  googleSignIn: (payload) =>
+    arenaRequest('/api/arena/auth/google/signin', { method: 'POST', body: JSON.stringify(payload) }),
+
+  googleRegister: (payload) =>
+    arenaRequest('/api/arena/auth/google/register', { method: 'POST', body: JSON.stringify(payload) }),
+
+  getMe: () =>
+    arenaRequest('/api/arena/auth/me', { method: 'GET' }),
+
+  logout: () =>
+    arenaRequest('/api/arena/auth/logout', { method: 'POST' }),
+
   // 1v1 Battle Rooms
   createFriendlyRoom: (payload) =>
     arenaRequest('/api/arena/battle/create', { method: 'POST', body: JSON.stringify(payload) }),
