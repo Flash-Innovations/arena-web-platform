@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_ARENA_API_URL || 'http://localhost:5050';
+const API_BASE = (import.meta.env.VITE_ARENA_API_URL || 'http://localhost:5050').replace(/\/+$/, '');
 
 async function arenaRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -60,6 +60,9 @@ export const arenaApi = {
 
   registerTournament: () =>
     arenaRequest('/api/arena/tournament/register', { method: 'POST' }),
+
+  getTournamentQuizQuestions: (count = 15) =>
+    arenaRequest(`/api/arena/tournament/quiz/questions?count=${count}`, { method: 'GET' }),
 
   getTournamentBracket: () =>
     arenaRequest('/api/arena/tournament/bracket', { method: 'GET' }),

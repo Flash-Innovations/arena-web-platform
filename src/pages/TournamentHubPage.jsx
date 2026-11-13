@@ -26,7 +26,7 @@ export function TournamentHubPage() {
           currentStage: 'REGISTRATION',
           quizStartTime: '2026-11-28T18:00:00.000Z',
           quizEndTime: '2026-11-28T21:00:00.000Z',
-          totalRegisteredCount: 1420
+          totalRegisteredCount: 0
         });
       } finally {
         setLoading(false);
