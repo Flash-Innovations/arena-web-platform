@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Frown, Share2, ArrowRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
+import { ArrowRight, Share2, RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 import arenaApi from '../../api/arenaApi';
 
 export function VictoryModal({ isOpen, isWinner, match, winReason, onPlayAgain }) {
@@ -8,7 +8,7 @@ export function VictoryModal({ isOpen, isWinner, match, winReason, onPlayAgain }
   if (!isOpen) return null;
 
   const handleShareWhatsApp = () => {
-    const text = `I just claimed a Sudden Death 1v1 Battle Victory on Flash Arena! Think you have faster DSA chops? Challenge me: https://arena.flashedu.in`;
+    const text = `I just won a 1v1 Code Duel on Flash Arena (${match?.problemTitle || 'DSA Problem'}). Challenge me: https://arena.flashedu.in`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -28,72 +28,72 @@ export function VictoryModal({ isOpen, isWinner, match, winReason, onPlayAgain }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md rounded-3xl bg-slate-900 border border-slate-800 p-8 text-center space-y-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-sm rounded-xl bg-zinc-900 border border-zinc-800 p-6 space-y-5 shadow-2xl">
         
-        {/* Glow Header Icon */}
-        <div className="flex justify-center">
-          {isWinner ? (
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center shadow-xl shadow-amber-500/30 text-slate-950 animate-bounce">
-              <Trophy className="w-10 h-10" />
-            </div>
-          ) : (
-            <div className="w-20 h-20 rounded-3xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-              <Frown className="w-10 h-10" />
-            </div>
-          )}
-        </div>
-
-        {/* Title & Reason */}
-        <div className="space-y-2">
-          <h2 className={`text-3xl font-black tracking-tight ${isWinner ? 'text-amber-400' : 'text-slate-200'}`}>
-            {isWinner ? 'SUDDEN DEATH VICTORY!' : 'KNOCKED OUT!'}
+        {/* Status Indicator */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            {isWinner ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <XCircle className="w-4 h-4 text-zinc-400" />
+            )}
+            <span className={`text-xs font-mono font-semibold uppercase tracking-wider ${isWinner ? 'text-emerald-400' : 'text-zinc-400'}`}>
+              {isWinner ? 'Victory Confirmed' : 'Match Concluded'}
+            </span>
+          </div>
+          <h2 className="text-lg font-bold text-zinc-100">
+            {isWinner ? 'You won the duel' : 'Opponent passed all test cases first'}
           </h2>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <p className="text-xs text-zinc-400 leading-relaxed">
             {isWinner
-              ? 'You passed 100% of test cases first and claimed the 1v1 match victory.'
-              : 'Your opponent achieved sudden death by passing all test cases first.'}
+              ? 'All test cases passed and verified by Judge0 runtime before opponent.'
+              : 'Better luck next match. Analyze the problem or request a fresh rematch.'}
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-3 pt-2">
-          {/* Rematch Button */}
+        {/* Telemetry Summary */}
+        <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-850 space-y-2 text-xs font-mono">
+          <div className="flex justify-between text-zinc-400">
+            <span>Room Code</span>
+            <span className="text-zinc-200 font-bold">{match?.roomCode || 'FLASH-0000'}</span>
+          </div>
+          <div className="flex justify-between text-zinc-400">
+            <span>Problem</span>
+            <span className="text-zinc-200 truncate max-w-[180px]">{match?.problemTitle || 'Challenge'}</span>
+          </div>
+          <div className="flex justify-between text-zinc-400">
+            <span>Game Mode</span>
+            <span className="text-zinc-200">{match?.gameMode?.replace('_', ' ') || 'Speed DSA'}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-2 pt-1">
           <button
             onClick={handleRequestRematch}
             disabled={rematchLoading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-600/30 disabled:opacity-50"
+            className="w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <Swords className="w-4 h-4" />
-            <span>{rematchLoading ? 'Creating Rematch...' : 'Request Instant Rematch'}</span>
+            {rematchLoading ? 'Configuring Rematch...' : 'Rematch with Fresh Problem'}
           </button>
 
-          {isWinner ? (
+          {isWinner && (
             <button
               onClick={handleShareWhatsApp}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
+              className="w-full py-2 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 font-medium text-xs border border-zinc-700/80 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <Share2 className="w-4 h-4" />
-              <span>Share Victory on WhatsApp</span>
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Share Result on WhatsApp</span>
             </button>
-          ) : (
-            <a
-              href="https://student.flashedu.in"
-              target="_blank"
-              rel="noreferrer"
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-semibold text-xs border border-slate-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Train on Student Portal</span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-            </a>
           )}
 
           <button
             onClick={onPlayAgain}
-            className="w-full py-2 rounded-xl text-slate-400 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-1.5 text-zinc-400 hover:text-zinc-200 text-xs font-medium transition-colors cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Return to Arena Lobby</span>
+            Return to Arena Lobby
           </button>
         </div>
 

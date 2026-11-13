@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Calendar, Ticket, ArrowRight, ShieldCheck, Zap, Users, Sparkles } from 'lucide-react';
+import { Trophy, ArrowRight, ShieldCheck, Ticket, Calendar, ChevronRight } from 'lucide-react';
 import arenaApi from '../api/arenaApi';
 
 export function TournamentHubPage() {
@@ -19,7 +19,6 @@ export function TournamentHubPage() {
           setOverview(res.tournament);
         }
       } catch (err) {
-        // Fallback default tournament data
         setOverview({
           title: 'Flash Coding Series 2026',
           knockoutBracketSize: 512,
@@ -42,7 +41,7 @@ export function TournamentHubPage() {
       const res = await arenaApi.registerTournament();
       if (res.success) {
         setRegistered(true);
-        setMessage('Successfully registered for Flash Coding Series 2026!');
+        setMessage('Successfully registered for Flash Coding Series 2026.');
       }
     } catch (err) {
       setMessage(err.message || 'Registration failed.');
@@ -52,118 +51,136 @@ export function TournamentHubPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12 animate-fade-in">
-      {/* Hero Tournament Section */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-black border border-indigo-900/50 p-8 sm:p-14 overflow-hidden shadow-2xl">
-        <div className="relative z-10 max-w-3xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            Flagship Campus Esports Series
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in">
+      {/* Header Specification Box */}
+      <div className="p-6 sm:p-8 rounded-xl bg-zinc-900/70 border border-zinc-800 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider">
+              Official Collegiate Tournament
+            </span>
           </div>
+          <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
+            <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Nov 28 - Dec 13, 2026</span>
+          </div>
+        </div>
 
-          <h1 className="text-3xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-            Flash Coding Series <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">2026</span>
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 tracking-tight">
+            Flash Coding Series 2026
           </h1>
-
-          <p className="text-sm sm:text-lg text-slate-300 leading-relaxed">
-            The ultimate 512-contender single-elimination algorithmic tournament. 4 stages of sudden-death coding duels leading to the Grand Championship.
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-3xl leading-relaxed">
+            The national 512-contender single-elimination algorithmic tournament. Top qualifiers from the Stage 1 Qualifying Quiz are seeded into power-of-two sudden-death coding brackets leading to the Grand Championship.
           </p>
+        </div>
 
-          {/* Grand Prize Spotlight */}
-          <div className="p-4 rounded-2xl bg-indigo-900/20 border border-indigo-500/30 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Ticket className="w-6 h-6" />
+        {/* Grand Prize Banner */}
+        <div className="p-3.5 rounded-lg bg-zinc-950 border border-zinc-850 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded bg-zinc-900 border border-zinc-750 flex items-center justify-center text-amber-400 shrink-0">
+              <Ticket className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-mono text-amber-400 uppercase tracking-wider font-bold">
-                Grand Prize
+              <div className="text-[10px] font-mono text-amber-400 uppercase font-bold tracking-wider">
+                Grand Championship Prize
               </div>
-              <div className="text-sm sm:text-base font-bold text-white">
-                Avengers: Doomsday Day-1 IMAX Premiere Ticket + 1-Yr Flash Pro
+              <div className="text-xs font-semibold text-zinc-200">
+                Avengers: Doomsday Day-1 IMAX Premiere Ticket + 1-Year Flash Pro Placement Access
               </div>
             </div>
           </div>
+          <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-500">
+            512 Contender Draw
+          </span>
+        </div>
 
-          {message && (
-            <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono">
-              {message}
+        {message && (
+          <div className="p-2.5 rounded bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-300">
+            {message}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          {registered ? (
+            <div className="px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold text-xs flex items-center gap-1.5 font-mono">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Registered for Nov 28 Qualifier</span>
             </div>
+          ) : (
+            <button
+              onClick={handleRegister}
+              disabled={registering}
+              className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+            >
+              <span>{registering ? 'Registering...' : 'Register for Tournament'}</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           )}
 
-          {/* Registration Button / Status */}
-          <div className="flex flex-wrap items-center gap-4 pt-2">
-            {registered ? (
-              <div className="px-6 py-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4" />
-                <span>You Are Registered For Nov 28</span>
-              </div>
-            ) : (
-              <button
-                onClick={handleRegister}
-                disabled={registering}
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-indigo-600/30 transition-all cursor-pointer"
-              >
-                <Trophy className="w-4 h-4" />
-                <span>{registering ? 'Registering...' : 'Register For Free (Nov 28)'}</span>
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </button>
-            )}
+          <Link
+            to="/series/bracket"
+            className="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700/80 transition-colors"
+          >
+            View Knockout Tree
+          </Link>
 
-            <Link
-              to="/series/bracket"
-              className="px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs uppercase tracking-wider border border-slate-700 transition-colors"
-            >
-              View 512-Tree Bracket
-            </Link>
-          </div>
+          <Link
+            to="/series/quiz"
+            className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-zinc-300 text-xs font-medium border border-zinc-800 transition-colors"
+          >
+            Stage 1 Quiz
+          </Link>
         </div>
       </div>
 
       {/* 4-Stage Roadmap Grid */}
-      <div className="space-y-4">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-          Tournament Stages Calendar
+      <div className="space-y-3">
+        <h2 className="text-xs font-mono font-semibold text-zinc-400 uppercase tracking-wider">
+          Tournament Stages Pipeline
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-            <span className="text-xs font-mono text-indigo-400 font-bold">STAGE 1 • NOV 28</span>
-            <h3 className="text-base font-bold text-white">Qualifying Quiz</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              20-minute timed CS and Aptitude test. Top 512 scorers qualify for opening round knockouts.
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-2">
+            <span className="text-[10px] font-mono text-zinc-400 font-semibold block">STAGE 1 · NOV 28</span>
+            <h3 className="text-sm font-semibold text-zinc-100">Qualifying Quiz</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              20-minute timed CS and Aptitude assessment. Top 512 scorers qualify for round 1.
             </p>
-            <div className="pt-2">
+            <div className="pt-1">
               <Link
                 to="/series/quiz"
-                className="inline-flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300"
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
               >
-                <span>Enter Quiz Arena</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Take Quiz</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-            <span className="text-xs font-mono text-indigo-400 font-bold">STAGE 2 • NOV 29</span>
-            <h3 className="text-base font-bold text-white">Round of 512 & 256</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
+          <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-2">
+            <span className="text-[10px] font-mono text-zinc-400 font-semibold block">STAGE 2 · NOV 29</span>
+            <h3 className="text-sm font-semibold text-zinc-100">Round of 512 &amp; 256</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">
               Opening single-elimination waves. Sudden-death 1v1 duels. First to pass 100% tests moves forward.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-            <span className="text-xs font-mono text-indigo-400 font-bold">STAGE 3 • DEC 05</span>
-            <h3 className="text-base font-bold text-white">Super 64 & Sweet 16</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Elite campus coders clash in high-stakes DP and Graph challenges.
+          <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-2">
+            <span className="text-[10px] font-mono text-zinc-400 font-semibold block">STAGE 3 · DEC 05</span>
+            <h3 className="text-sm font-semibold text-zinc-100">Super 64 &amp; Sweet 16</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Advanced campus coders clash in high-difficulty Dynamic Programming and Graph challenges.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-            <span className="text-xs font-mono text-indigo-400 font-bold">STAGE 4 • DEC 13</span>
-            <h3 className="text-base font-bold text-white">Grand Championship</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Quarter-finals, semi-finals, and the Grand Final 1v1. IMAX premiere tickets awarded!
+          <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-2">
+            <span className="text-[10px] font-mono text-zinc-400 font-semibold block">STAGE 4 · DEC 13</span>
+            <h3 className="text-sm font-semibold text-zinc-100">Grand Championship</h3>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Quarterfinals, semifinals, and the Grand Final 1v1 duel. IMAX premiere tickets awarded.
             </p>
           </div>
         </div>

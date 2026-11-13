@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Timer, CheckCircle, ArrowRight, ArrowLeft, ShieldAlert, Award, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { Timer, ArrowRight, ArrowLeft, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { arenaApi } from '../api/arenaApi';
 
 export function TournamentQuizPage() {
@@ -93,29 +93,29 @@ export function TournamentQuizPage() {
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-32 text-center space-y-4">
-        <Loader2 className="w-8 h-8 mx-auto text-indigo-400 animate-spin" />
-        <p className="text-sm font-mono text-slate-400">Loading Stage 1 Qualifying Quiz from Question Bank...</p>
+      <div className="max-w-xl mx-auto px-4 py-24 text-center space-y-3">
+        <Loader2 className="w-6 h-6 mx-auto text-zinc-400 animate-spin" />
+        <p className="text-xs font-mono text-zinc-400">Loading Stage 1 Quiz from Question Bank...</p>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-24 text-center space-y-6">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-          <AlertCircle className="w-7 h-7" />
+      <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+        <div className="w-10 h-10 mx-auto rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-amber-400">
+          <AlertCircle className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-white">Quiz Access Restricted</h2>
-          <p className="text-xs text-slate-400 mt-2 max-w-md mx-auto">{loadError}</p>
+          <h2 className="text-sm font-bold text-zinc-100">Access Restricted</h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{loadError}</p>
         </div>
-        <div className="pt-2 flex justify-center gap-3">
+        <div className="pt-2">
           <a
             href="/series"
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase tracking-wider transition-colors"
+            className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors"
           >
-            Go to Tournament Hub
+            Tournament Hub
           </a>
         </div>
       </div>
@@ -128,64 +128,64 @@ export function TournamentQuizPage() {
 
   if (submitted && result) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6 animate-fade-in">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-          <Award className="w-8 h-8" />
-        </div>
-        <div>
-          <span className="text-xs font-mono uppercase text-emerald-400 tracking-widest font-bold">
-            Day 1 Qualifying Attempt Verified
-          </span>
-          <h2 className="text-3xl font-black text-white mt-1">Assessment Officially Scored</h2>
-          <p className="text-xs text-slate-400 mt-2">
-            Your answers were verified by the Flash Question Bank server. Results are permanently recorded for bracket seeding.
+      <div className="max-w-xl mx-auto px-4 py-16 space-y-5 animate-fade-in">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider">
+              Assessment Verified
+            </span>
+          </div>
+          <h2 className="text-xl font-bold text-zinc-100">Stage 1 Attempt Recorded</h2>
+          <p className="text-xs text-zinc-400">
+            Answers officially verified by the server. Your seed in the 512-tree is determined by this result.
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 text-left">
-          <div className="grid grid-cols-3 gap-4 pb-4 border-b border-slate-800 text-center">
+        <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-4 font-mono text-xs">
+          <div className="grid grid-cols-3 gap-3 pb-3 border-b border-zinc-800 text-center">
             <div>
-              <div className="text-xs text-slate-400 font-mono">Official Score</div>
-              <div className="text-2xl font-black text-emerald-400 mt-1">{result.score}%</div>
+              <div className="text-[11px] text-zinc-500 uppercase">Score</div>
+              <div className="text-lg font-bold text-zinc-100 mt-0.5">{result.score}%</div>
             </div>
             <div>
-              <div className="text-xs text-slate-400 font-mono">Correct Answers</div>
-              <div className="text-2xl font-black text-white mt-1">
-                {result.correctCount !== undefined ? `${result.correctCount} / ${result.totalQuestions}` : `${result.score}/100`}
+              <div className="text-[11px] text-zinc-500 uppercase">Passed</div>
+              <div className="text-lg font-bold text-zinc-100 mt-0.5">
+                {result.correctCount !== undefined ? `${result.correctCount}/${result.totalQuestions}` : `${result.score}/100`}
               </div>
             </div>
             <div>
-              <div className="text-xs text-slate-400 font-mono">Time Taken</div>
-              <div className="text-2xl font-black text-indigo-400 mt-1">
+              <div className="text-[11px] text-zinc-500 uppercase">Duration</div>
+              <div className="text-lg font-bold text-zinc-100 mt-0.5">
                 {Math.floor(result.timeTaken / 60)}m {result.timeTaken % 60}s
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs font-mono pt-2">
-            <span className="text-slate-400">Target Knockout Bracket:</span>
-            <span className="font-bold text-indigo-400">Round of 512 (Nov 29 Wave 1)</span>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-zinc-400">Knockout Target</span>
+            <span className="text-zinc-200 font-semibold">Round of 512 (Nov 29 Wave 1)</span>
           </div>
 
           {result.perks?.voucherCode && (
-            <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-850 flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-indigo-300">Founding Contender Voucher</div>
-                <div className="text-[11px] text-slate-400">30% off annual placement subscription</div>
+                <div className="text-xs font-semibold text-zinc-200 font-sans">Placement Voucher</div>
+                <div className="text-[11px] text-zinc-500 font-sans">30% off annual subscription</div>
               </div>
-              <span className="px-3 py-1 rounded-lg bg-indigo-600 font-mono font-bold text-xs text-white">
+              <span className="px-2.5 py-1 rounded bg-zinc-800 font-mono text-xs font-bold text-zinc-100">
                 {result.perks.voucherCode}
               </span>
             </div>
           )}
         </div>
 
-        <div className="pt-2">
+        <div>
           <a
             href="/series/bracket"
-            className="inline-block px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+            className="block w-full py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs text-center transition-colors"
           >
-            View Knockout Tournament Bracket
+            Go to Tournament Bracket
           </a>
         </div>
       </div>
@@ -197,26 +197,26 @@ export function TournamentQuizPage() {
   const currentAnswer = selectedAnswers[currentQ.id];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8 animate-fade-in">
+    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6 animate-fade-in">
       {/* Quiz Top Bar */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase bg-zinc-900 text-zinc-300 border border-zinc-800">
               {currentQ.category || 'General'}
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-slate-800 text-slate-300">
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase bg-zinc-900 text-zinc-400 border border-zinc-800">
               {currentQ.difficulty || 'Medium'}
             </span>
           </div>
-          <h1 className="text-xl font-bold text-white mt-1.5">{currentQ.title || 'Flash Series Qualifier'}</h1>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
+          <h1 className="text-base font-bold text-zinc-100 mt-1">{currentQ.title || 'Flash Series Qualifier'}</h1>
+          <p className="text-xs text-zinc-500 font-mono">
             Question {currentIdx + 1} of {questions.length}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 font-mono text-sm font-bold text-white">
-          <Timer className="w-4 h-4 text-indigo-400" />
+        <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 font-mono text-xs font-bold text-zinc-200">
+          <Timer className="w-3.5 h-3.5 text-zinc-400" />
           <span>
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </span>
@@ -224,12 +224,12 @@ export function TournamentQuizPage() {
       </div>
 
       {/* Question Card */}
-      <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-6">
-        <p className="text-base sm:text-lg font-medium text-white leading-relaxed whitespace-pre-wrap">
+      <div className="p-6 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-5">
+        <p className="text-sm font-medium text-zinc-200 leading-relaxed whitespace-pre-wrap">
           {currentQ.statement}
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {(currentQ.options || []).map((opt, optIndex) => {
             const optId = opt.id || String.fromCharCode(65 + optIndex);
             const isSelected = currentAnswer === optId;
@@ -237,18 +237,18 @@ export function TournamentQuizPage() {
               <button
                 key={optId}
                 onClick={() => handleSelectOption(currentQ.id, optId)}
-                className={`w-full p-4 rounded-xl text-left text-xs sm:text-sm font-medium border transition-all cursor-pointer ${
+                className={`w-full p-3 rounded-lg text-left text-xs transition-colors cursor-pointer border ${
                   isSelected
-                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md shadow-indigo-600/10'
-                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-zinc-800 border-zinc-500 text-zinc-100 font-medium'
+                    : 'bg-zinc-950/60 border-zinc-850 hover:border-zinc-750 text-zinc-300'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold ${
+                    className={`w-5 h-5 rounded flex items-center justify-center text-[11px] font-mono font-bold shrink-0 ${
                       isSelected
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-900 border border-slate-800 text-slate-400'
+                        ? 'bg-zinc-100 text-zinc-950'
+                        : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
                     }`}
                   >
                     {optId}
@@ -266,7 +266,7 @@ export function TournamentQuizPage() {
         <button
           onClick={() => setCurrentIdx((prev) => Math.max(0, prev - 1))}
           disabled={currentIdx === 0}
-          className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-300 text-xs font-bold border border-slate-800 disabled:opacity-30 cursor-pointer flex items-center gap-1.5"
+          className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-zinc-300 text-xs font-medium border border-zinc-800 disabled:opacity-30 cursor-pointer flex items-center gap-1.5"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Previous</span>
@@ -275,19 +275,19 @@ export function TournamentQuizPage() {
         {currentIdx < questions.length - 1 ? (
           <button
             onClick={() => setCurrentIdx((prev) => Math.min(questions.length - 1, prev + 1))}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium border border-zinc-700 transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            <span>Next Question</span>
+            <span>Next</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         ) : (
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-2"
+            className="px-5 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
           >
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            <span>{submitting ? 'Verifying with Server...' : 'Submit Final Assessment'}</span>
+            {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>{submitting ? 'Verifying...' : 'Submit Assessment'}</span>
           </button>
         )}
       </div>

@@ -96,64 +96,63 @@ export function ContestViewPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-8 animate-fade-in">
-      {/* Contest Banner Card */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-950 border border-slate-800 p-8 sm:p-12 overflow-hidden shadow-2xl">
-        <div className="relative z-10 space-y-4 max-w-3xl">
+      {/* Contest Specification Box */}
+      <div className="rounded-xl bg-zinc-900/70 border border-zinc-800 p-6 sm:p-8 space-y-4">
+        <div className="space-y-3 max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-400">
-              Campus League Contest
+            <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 text-xs font-mono">
+              Campus Contest
             </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400">
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono">
               {contest.status.replace('_', ' ')}
             </span>
             {contest.maxParticipants === 0 ? (
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono text-cyan-400">
-                Unlimited Students Allowed
+              <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 text-xs font-mono">
+                Unlimited Capacity
               </span>
             ) : (
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono text-cyan-400">
+              <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 text-xs font-mono">
                 {contest.participantCount} / {contest.maxParticipants} Registered
               </span>
             )}
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 tracking-tight">
             {contest.title}
           </h1>
 
-          <p className="text-xs sm:text-base text-slate-300 leading-relaxed">
+          <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
             {contest.description}
           </p>
 
-          <div className="flex items-center gap-3 pt-2 text-xs text-slate-400 font-mono">
-            <span>Hosted by <strong className="text-white">{contest.creatorName}</strong> ({contest.creatorCollege})</span>
+          <div className="flex items-center gap-3 pt-1 text-xs text-zinc-400 font-mono">
+            <span>Hosted by <strong className="text-zinc-200">{contest.creatorName}</strong> ({contest.creatorCollege})</span>
           </div>
 
           {/* Action Row */}
-          <div className="flex flex-wrap items-center gap-3 pt-4">
+          <div className="flex flex-wrap items-center gap-2.5 pt-2">
             {contest.isCreator && (
               <Link
                 to={`/contest/${contest.slug}/host`}
-                className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium border border-zinc-700 transition-colors flex items-center gap-1.5"
               >
-                <Shield className="w-4 h-4" />
-                <span>Open Host Control Deck</span>
+                <Shield className="w-3.5 h-3.5" />
+                <span>Host Control Deck</span>
               </Link>
             )}
 
             {contest.isRegistered ? (
-              <div className="px-5 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>You Are Registered</span>
+              <div className="px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold text-xs flex items-center gap-1.5 font-mono">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Registered for Contest</span>
               </div>
             ) : (
               <button
                 onClick={handleRegister}
                 disabled={registering}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer"
               >
-                <Trophy className="w-4 h-4" />
-                <span>{registering ? 'Entering...' : 'Register For Contest'}</span>
+                <span>{registering ? 'Entering...' : 'Register for Contest'}</span>
               </button>
             )}
 
@@ -161,7 +160,7 @@ export function ContestViewPage() {
               href={contest.whatsappShareUrl || '#'}
               target="_blank"
               rel="noreferrer"
-              className="px-4 py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-300 font-medium text-xs border border-zinc-700 transition-colors flex items-center gap-1.5"
             >
               <MessageSquare className="w-4 h-4" />
               <span>WhatsApp Invite</span>

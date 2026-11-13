@@ -27,35 +27,35 @@ const AVAILABLE_STAGE_TYPES = [
     type: 'MCQ_QUIZ',
     name: 'Qualifier Quiz / Aptitude',
     icon: HelpCircle,
-    color: 'from-amber-500/20 to-orange-500/20 border-amber-500/40 text-amber-400',
+    color: 'bg-zinc-850 border-zinc-700 text-zinc-200',
     description: 'Timed screening quiz to filter out bottom percentile quickly.'
   },
   {
     type: 'SPEED_DSA_1V1',
     name: '1v1 Knockout Bracket',
     icon: Swords,
-    color: 'from-indigo-500/20 to-violet-500/20 border-indigo-500/40 text-indigo-400',
+    color: 'bg-zinc-850 border-zinc-700 text-zinc-200',
     description: 'Single-elimination esports tournament tree (8, 16, 32, 64 survivors).'
   },
   {
     type: 'OPEN_LEADERBOARD',
     name: 'Open Contest Leaderboard',
     icon: Trophy,
-    color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/40 text-blue-400',
+    color: 'bg-zinc-850 border-zinc-700 text-zinc-200',
     description: 'Multi-problem open contest with live LeetCode/Codeforces score.'
   },
   {
     type: 'BUG_HUNTER_DUEL',
     name: 'Bug Hunter Reverse Debug',
     icon: Bug,
-    color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/40 text-emerald-400',
+    color: 'bg-zinc-850 border-zinc-700 text-zinc-200',
     description: 'Contestants are given broken algorithms and race to fix edge cases.'
   },
   {
     type: 'CODE_GOLF',
     name: 'Code Golf Showdown',
     icon: Code2,
-    color: 'from-rose-500/20 to-pink-500/20 border-rose-500/40 text-rose-400',
+    color: 'bg-zinc-850 border-zinc-700 text-zinc-200',
     description: 'Shortest clean code passing all tests wins the round.'
   }
 ];
@@ -253,7 +253,7 @@ export function ContestStudioPage() {
           <div className="pt-4">
             <button
               onClick={() => navigate(`/contest/${publishedContest.contest.slug}`)}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-600/30"
+              className="px-6 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer"
             >
               Enter Contest Lobby
             </button>
@@ -367,7 +367,7 @@ export function ContestStudioPage() {
                       className="w-full p-3 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950/60 hover:bg-slate-950 text-left transition-all group cursor-pointer flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg border bg-gradient-to-br ${item.color}`}>
+                        <div className={`p-1.5 rounded-lg border ${item.color}`}>
                           <Icon className="w-4 h-4" />
                         </div>
                         <div>
@@ -400,16 +400,15 @@ export function ContestStudioPage() {
               <button
                 onClick={handlePublish}
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
               >
                 {loading ? (
                   <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
                     <span>Publishing...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
                     <span>Publish Contest</span>
                   </>
                 )}
@@ -432,7 +431,7 @@ export function ContestStudioPage() {
                         <span className="w-6 h-6 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-[11px] font-mono font-bold text-indigo-400">
                           {index + 1}
                         </span>
-                        <div className={`p-1.5 rounded-lg border bg-gradient-to-br ${meta?.color}`}>
+                        <div className={`p-1.5 rounded-lg border ${meta?.color || 'border-zinc-700 bg-zinc-800'}`}>
                           <Icon className="w-3.5 h-3.5" />
                         </div>
                         <div>

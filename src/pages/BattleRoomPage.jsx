@@ -5,17 +5,13 @@ import { BattleHUD } from '../components/battle/BattleHUD';
 import { CodeEditor } from '../components/battle/CodeEditor';
 import { VictoryModal } from '../components/battle/VictoryModal';
 import {
-  Swords,
   CheckCircle2,
   XCircle,
-  AlertCircle,
-  Play,
-  FileText,
-  ArrowRight,
-  Share2,
   Copy,
   Check,
-  MessageSquare
+  MessageSquare,
+  Lock,
+  ArrowRight
 } from 'lucide-react';
 
 export function BattleRoomPage() {
@@ -37,8 +33,29 @@ export function BattleRoomPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [tabBlurViolations, setTabBlurViolations] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [isSpectatorGated, setIsSpectatorGated] = useState(false);
 
-  // 1. Fetch Initial Match State
+  // 1. Guest Spectator Policy: 3 Matches Max Per Device
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('arena_spectated_matches') || '[]');
+      const isAlreadyRecorded = stored.includes(roomCode);
+      const isUserAuthenticated = Boolean(localStorage.getItem('arena_token') || document.cookie.includes('token'));
+
+      if (!isUserAuthenticated && !isAlreadyRecorded) {
+        if (stored.length >= 3) {
+          setIsSpectatorGated(true);
+        } else {
+          stored.push(roomCode);
+          localStorage.setItem('arena_spectated_matches', JSON.stringify(stored));
+        }
+      }
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }, [roomCode]);
+
+  // 2. Fetch Initial Match State
   useEffect(() => {
     let isMounted = true;
     arenaApi.getMatch(roomCode)
@@ -59,7 +76,7 @@ export function BattleRoomPage() {
     return () => { isMounted = false; };
   }, [roomCode, language]);
 
-  // 2. Heartbeat Loop
+  // 3. Heartbeat Loop
   useEffect(() => {
     if (!match) return;
 
@@ -90,7 +107,7 @@ export function BattleRoomPage() {
     return () => clearInterval(interval);
   }, [roomCode, match, tabBlurViolations]);
 
-  // 3. Match Countdown Timer
+  // 4. Match Countdown Timer
   useEffect(() => {
     if (!match?.actualStartTime || match?.status !== 'IN_PROGRESS') return;
 
@@ -165,11 +182,43 @@ export function BattleRoomPage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const shareText = `I challenge you to a 1v1 Code Battle on Flash Arena! Room: ${roomCode}. Join here: ${window.location.href}`;
+  const shareText = `1v1 Code Duel on Flash Arena. Room: ${roomCode}. Join: ${window.location.href}`;
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
+  if (isSpectatorGated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b] p-4">
+        <div className="max-w-md w-full p-8 rounded-xl bg-zinc-900 border border-zinc-800 text-center space-y-4 shadow-xl">
+          <div className="w-10 h-10 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-300 mx-auto">
+            <Lock className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-zinc-100">Guest Spectator Limit Reached</h2>
+            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+              You have watched 3 free guest matches on this device. Sign in or create a free account to continue spectating live campus battles and join the arena.
+            </p>
+          </div>
+          <div className="pt-2 flex gap-2 justify-center">
+            <button
+              onClick={() => navigate('/')}
+              className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors"
+            >
+              Return to Lobby
+            </button>
+            <a
+              href="https://student.flashedu.in/login"
+              className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors"
+            >
+              Sign In Free
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+    <div className="min-h-screen flex flex-col bg-[#09090b] text-zinc-100">
       
       {/* 1v1 Battle HUD Header */}
       <BattleHUD
@@ -178,25 +227,26 @@ export function BattleRoomPage() {
         timeRemainingSeconds={timeRemainingSeconds}
       />
 
-      {/* Check-In Lobby Overlay (If match not yet started) */}
+      {/* Check-In Pre-Battle Lobby */}
       {match?.status === 'CHECKIN_OPEN' || match?.status === 'WAITING_FOR_OPPONENT' ? (
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-md w-full p-8 rounded-3xl bg-slate-900 border border-slate-800 text-center space-y-6 shadow-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto">
-              <Swords className="w-8 h-8" />
-            </div>
+          <div className="max-w-md w-full p-6 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-5 shadow-xl">
             <div>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase">
-                Mode: {match?.gameMode?.replace('_', ' ') || 'Speed DSA'}
-              </span>
-              <h2 className="text-2xl font-black text-white mt-2">1v1 Pre-Battle Lobby</h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Room Code: <span className="font-mono font-bold text-indigo-400">{roomCode}</span>
-              </p>
-              <p className="text-xs text-slate-400 mt-2">
-                Share this room with your friend. When both players check in, the duel begins!
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-[10px] font-mono uppercase text-blue-400 font-semibold tracking-wider">
+                  Pre-Match Chamber · {match?.gameMode?.replace('_', ' ')}
+                </span>
+              </div>
+              <h2 className="text-lg font-bold text-zinc-100 mt-1">Ready Up for Duel</h2>
+              <p className="text-xs text-zinc-400 mt-0.5 font-mono">
+                Room Code: <strong className="text-zinc-200 font-bold">{roomCode}</strong>
               </p>
             </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Invite your opponent using the room code or link below. When both contenders check in, the dual timer begins.
+            </p>
 
             {/* Quick Share Buttons */}
             <div className="flex gap-2">
@@ -204,82 +254,92 @@ export function BattleRoomPage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20"
+                className="flex-1 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 text-xs font-medium border border-zinc-700 flex items-center justify-center gap-1.5 transition-colors"
               >
-                <MessageSquare className="w-4 h-4" />
-                <span>WhatsApp</span>
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <span>WhatsApp Invite</span>
               </a>
               <button
                 onClick={handleCopyLink}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-slate-700 transition-colors cursor-pointer"
+                className="flex-1 py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 text-xs font-medium border border-zinc-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
                 <span>{copied ? 'Copied' : 'Copy Link'}</span>
               </button>
             </div>
 
             <button
               onClick={handleCheckIn}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-indigo-600/20"
+              className="w-full py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer"
             >
-              Ready &amp; Check-In
+              Confirm Ready &amp; Check In
             </button>
           </div>
         </div>
       ) : (
         /* Live Split Duel Workspace */
-        <div className="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-3">
           
-          {/* Left Column (5 cols): Problem Statement & Test Cases */}
-          <div className="lg:col-span-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-140px)]">
+          {/* Left Column (5 cols): Problem Statement & Test Case Deck */}
+          <div className="lg:col-span-5 flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)]">
             
             {/* Problem Card */}
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+            <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold uppercase">
-                  {problem?.category || 'DSA Problem'}
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-medium">
+                  {problem?.category || 'Algorithm'}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-850 text-zinc-400 border border-zinc-750">
                   {problem?.difficulty || 'Medium'}
                 </span>
               </div>
-              <h2 className="text-base font-bold text-white tracking-tight">{problem?.title}</h2>
-              <div className="text-xs text-slate-300 whitespace-pre-line leading-relaxed font-sans font-normal opacity-90">
+              <h2 className="text-sm font-bold text-zinc-100 tracking-tight">{problem?.title}</h2>
+              <div className="text-xs text-zinc-300 whitespace-pre-line leading-relaxed font-sans opacity-90">
                 {problem?.description}
               </div>
             </div>
 
             {/* Test Case Execution Output Console */}
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex-1 space-y-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Verification Results
-              </span>
+            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 flex-1 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono uppercase text-zinc-400 font-semibold">
+                  Test Case Results
+                </span>
+                {testResults.length > 0 && (
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    {testResults.filter(t => t.passed).length}/{testResults.length} Passed
+                  </span>
+                )}
+              </div>
+
               {testResults.length === 0 ? (
-                <p className="text-xs text-slate-600 py-4 text-center">
-                  Click "Run Tests" to test against visible sample inputs.
+                <p className="text-xs font-mono text-zinc-600 py-4 text-center">
+                  Click Run to verify against public test inputs.
                 </p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {testResults.map((tc) => (
                     <div
                       key={tc.testCaseNumber}
-                      className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                      className={`p-2 rounded-lg border text-xs flex items-center justify-between font-mono ${
                         tc.passed
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                          : 'bg-red-500/10 border-red-500/30 text-red-300'
+                          ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300'
+                          : 'bg-rose-500/5 border-rose-500/20 text-rose-300'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         {tc.passed ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-red-400" />
+                          <XCircle className="w-3.5 h-3.5 text-rose-400" />
                         )}
                         <span>
-                          Test Case #{tc.testCaseNumber} {tc.isHidden && '(Hidden Test)'}
+                          Case #{tc.testCaseNumber} {tc.isHidden && '(Hidden)'}
                         </span>
                       </div>
-                      <span className="font-mono text-[10px]">{tc.passed ? 'PASSED' : 'FAILED'}</span>
+                      <span className="text-[10px] font-bold">
+                        {tc.passed ? 'PASS' : 'FAIL'}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -288,8 +348,8 @@ export function BattleRoomPage() {
 
           </div>
 
-          {/* Right Column (7 cols): Monaco Code Editor with Anti-Paste Lock */}
-          <div className="lg:col-span-7 flex flex-col h-[calc(100vh-140px)]">
+          {/* Right Column (7 cols): Monaco Code Editor */}
+          <div className="lg:col-span-7 flex flex-col h-[calc(100vh-100px)]">
             <CodeEditor
               code={code}
               onChange={setCode}
@@ -306,7 +366,7 @@ export function BattleRoomPage() {
         </div>
       )}
 
-      {/* Sudden Death Victory / Defeat Modal with Rematch Trigger */}
+      {/* Sudden Death Victory / Defeat Modal */}
       <VictoryModal
         isOpen={isVictoryModalOpen}
         isWinner={isWinner}

@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Swords,
-  Trophy,
-  Users,
-  Zap,
+  Plus,
   ArrowRight,
-  Shield,
-  Sparkles,
+  Search,
+  Filter,
+  Users,
   Layers,
-  Clock,
-  Play,
-  Plus
+  Trophy,
+  ArrowUpRight,
+  Shield,
+  Activity,
+  ChevronRight
 } from 'lucide-react';
 import CreateBattleModal from '../components/battle/CreateBattleModal';
 import arenaApi from '../api/arenaApi';
@@ -22,6 +22,7 @@ export function ArenaLobbyPage() {
   const [openBattles, setOpenBattles] = useState([]);
   const [publicContests, setPublicContests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('ALL');
 
   useEffect(() => {
     async function loadLobbyData() {
@@ -39,7 +40,7 @@ export function ArenaLobbyPage() {
           setPublicContests(contestsRes.value.contests || []);
         }
       } catch (e) {
-        // Fallback gracefully
+        // Fallback
       } finally {
         setLoading(false);
       }
@@ -50,6 +51,19 @@ export function ArenaLobbyPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Keyboard shortcut: Press 'C' to open Create Duel Modal
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        setIsCreateModalOpen(true);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleJoin = (e) => {
     e.preventDefault();
     if (roomCodeInput.trim()) {
@@ -57,224 +71,248 @@ export function ArenaLobbyPage() {
     }
   };
 
+  const filteredBattles = openBattles.filter((b) => {
+    if (activeTab === 'ALL') return true;
+    return b.gameMode === activeTab;
+  });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-12 animate-fade-in">
-      {/* Hero Banner: Flash Coding Series */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-black border border-indigo-900/40 p-8 sm:p-12 overflow-hidden shadow-2xl">
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-400">
-            <Sparkles className="w-3.5 h-3.5" />
-            Competitive Coding Esports Colosseum
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-fade-in">
+      {/* Top Command Bar & Telemetry */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-zinc-100">Battle Operations</h1>
+            <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">
+              v2.1
+            </span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-            Prove Your Code in <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">1v1 Real-Time Battle</span>
-          </h1>
-          <p className="text-xs sm:text-base text-slate-300 leading-relaxed">
-            Create friendly 1v1 duels, share via WhatsApp, or build your own multi-round tournament with drag-and-drop formats in the Contest Studio.
+          <p className="text-xs text-zinc-400 mt-1">
+            Real-time algorithmic duels, custom tournament stages, and collegiate knockout brackets.
           </p>
-          <div className="pt-2 flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
-            >
-              <Swords className="w-4 h-4" />
-              <span>Create 1v1 Battle</span>
-            </button>
-
-            <Link
-              to="/contest/studio"
-              className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
-            >
-              <Layers className="w-4 h-4 text-indigo-400" />
-              <span>Contest Studio</span>
-            </Link>
-
-            <Link
-              to="/series"
-              className="px-5 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-850 text-slate-300 font-bold text-xs uppercase tracking-wider flex items-center gap-2 border border-indigo-900/40 transition-colors cursor-pointer"
-            >
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span>Flash Series (Nov 28)</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Custom Battle Creator Trigger */}
-        <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4 hover:border-slate-700 transition-all">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <Swords className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">Create Custom 1v1 Battle</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Select mode (Speed DSA, Code Golf, Bug Hunter, Time Attack), pick topic, and share room invite via WhatsApp.
-            </p>
-          </div>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Configure & Generate Room</span>
-          </button>
         </div>
 
-        {/* Card 2: Join Match via Room Code */}
-        <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4 hover:border-slate-700 transition-all">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">Join with Room Code</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Received a duel code from a friend? Enter it below to jump straight into the arena.
-            </p>
-          </div>
-          <form onSubmit={handleJoin} className="flex gap-2">
+        {/* Global Action Tools */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Quick Room Code Entry */}
+          <form onSubmit={handleJoin} className="relative flex items-center">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 pointer-events-none" />
             <input
               type="text"
-              placeholder="e.g. FLASH-4829"
+              placeholder="Join Code (e.g. FLASH-4829)"
               value={roomCodeInput}
               onChange={(e) => setRoomCodeInput(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono font-bold uppercase text-white focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
+              className="pl-8 pr-3 py-1.5 rounded-lg bg-zinc-900/90 border border-zinc-800 text-xs font-mono font-medium text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 w-52"
             />
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer"
-            >
-              Join
-            </button>
           </form>
+
+          {/* Create Duel Trigger */}
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create Duel</span>
+            <kbd className="hidden sm:inline-block px-1 rounded bg-zinc-200 text-[10px] font-mono text-zinc-800 font-bold ml-1">
+              C
+            </kbd>
+          </button>
         </div>
       </div>
 
-      {/* Live Open 1v1 Duels Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Flagship Banner: Flash Coding Series Announcement */}
+      <div className="p-5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-indigo-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-              Live Open Duels (Waiting for Challenger)
-            </h2>
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            <span className="text-xs font-mono font-semibold text-amber-400 uppercase tracking-wider">
+              Flagship Tournament Series
+            </span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-xs font-mono text-zinc-400">Nov 28 Qualifier</span>
           </div>
-          <span className="text-xs font-mono text-slate-500">{openBattles.length} Rooms Active</span>
+          <h2 className="text-base font-bold text-zinc-100">
+            Flash Coding Series 2026 : 512-Contender Single-Elimination Knockout
+          </h2>
+          <p className="text-xs text-zinc-400 max-w-2xl">
+            Pass the Day 1 Qualifying Quiz to secure seed in the 512 knockout tree. Compete for Day-1 Avengers: Doomsday IMAX Premiere Tickets and annual placement packages.
+          </p>
         </div>
 
-        {openBattles.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-center space-y-2">
-            <p className="text-xs text-slate-400 font-mono">No public duels currently waiting.</p>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="text-xs font-bold text-indigo-400 hover:text-indigo-300"
-            >
-              Create the first battle room
-            </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            to="/series"
+            className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700/80 transition-colors flex items-center gap-1"
+          >
+            <span>Tournament Hub</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link
+            to="/series/quiz"
+            className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
+          >
+            Take Qualifier
+          </Link>
+        </div>
+      </div>
+
+      {/* Live Open Duels Section (Linear Dense Table) */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-zinc-200">Open Duels</h3>
+            <span className="px-1.5 py-0.2 rounded bg-zinc-900 text-[10px] font-mono text-zinc-400 border border-zinc-800">
+              {filteredBattles.length} Available
+            </span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {openBattles.map((b) => (
-              <div
-                key={b.roomCode}
-                className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 hover:border-slate-700 transition-all shadow-md"
+
+          {/* Mode Filter Tabs */}
+          <div className="flex items-center gap-1">
+            {[
+              { id: 'ALL', label: 'All Modes' },
+              { id: 'SPEED_DSA', label: 'Speed DSA' },
+              { id: 'CODE_GOLF', label: 'Code Golf' },
+              { id: 'BUG_HUNTER', label: 'Bug Hunter' },
+              { id: 'TIME_ATTACK', label: 'Time Attack' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                }`}
               >
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="font-bold text-indigo-400">{b.roomCode}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300 font-bold">
-                    {b.gameMode.replace('_', ' ')}
-                  </span>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold text-white line-clamp-1">{b.problemTitle}</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Host: <strong className="text-slate-300">{b.hostName}</strong> ({b.hostCollege})
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-2 border-t border-slate-800/80">
-                  <span>Tier: <strong className="text-slate-200">{b.difficulty}</strong></span>
-                  <span>{b.durationMinutes} Mins</span>
-                </div>
-
-                <a
-                  href={`/battle/${b.roomCode}`}
-                  className="block w-full py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider text-center transition-all shadow-md shadow-indigo-600/20"
-                >
-                  Accept Challenge
-                </a>
-              </div>
+                {tab.label}
+              </button>
             ))}
           </div>
-        )}
+        </div>
+
+        {/* Data Table */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 overflow-hidden">
+          {filteredBattles.length === 0 ? (
+            <div className="py-16 text-center space-y-3">
+              <p className="text-xs font-mono text-zinc-500">No open duels matching this filter right now.</p>
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-zinc-300 text-xs font-medium border border-zinc-800 cursor-pointer"
+              >
+                Create a duel room
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-800 bg-zinc-900/60 text-zinc-400 font-mono text-[11px]">
+                    <th className="py-2.5 px-4 font-medium">Room</th>
+                    <th className="py-2.5 px-4 font-medium">Problem / Focus</th>
+                    <th className="py-2.5 px-4 font-medium">Mode</th>
+                    <th className="py-2.5 px-4 font-medium">Tier</th>
+                    <th className="py-2.5 px-4 font-medium">Host</th>
+                    <th className="py-2.5 px-4 font-medium text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-850 text-zinc-300">
+                  {filteredBattles.map((b) => (
+                    <tr key={b.roomCode} className="hover:bg-zinc-900/40 transition-colors group">
+                      <td className="py-3 px-4 font-mono font-bold text-zinc-100">
+                        {b.roomCode}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-zinc-200">
+                        <div className="line-clamp-1">{b.problemTitle || 'Random Challenge'}</div>
+                        <span className="text-[11px] text-zinc-500 font-mono">{b.category || 'DSA'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-900 text-zinc-300 border border-zinc-800">
+                          {b.gameMode.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-xs text-zinc-300">
+                        {b.difficulty}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-zinc-200 font-medium">{b.hostName}</span>
+                        <span className="block text-[11px] text-zinc-500 truncate max-w-[140px]">{b.hostCollege}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <a
+                          href={`/battle/${b.roomCode}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium border border-zinc-750 transition-colors"
+                        >
+                          <span>Enter Duel</span>
+                          <ChevronRight className="w-3 h-3 text-zinc-400" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Student Created Contests Showcase */}
-      <div className="space-y-4">
+      {/* Student Contest Studio Showcase */}
+      <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-              Student Campus Contests
-            </h2>
+            <h3 className="text-sm font-semibold text-zinc-200">Campus Contests</h3>
+            <span className="text-xs text-zinc-500 font-mono">Student Created</span>
           </div>
           <Link
             to="/contest/studio"
-            className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+            className="text-xs text-zinc-400 hover:text-zinc-200 flex items-center gap-1 transition-colors"
           >
-            <span>Host a Contest</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>Open Contest Studio</span>
+            <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
 
         {publicContests.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-slate-900/50 border border-slate-800/80 text-center space-y-3">
-            <p className="text-xs text-slate-400">
-              No campus contests scheduled yet. Build your own multi-round tournament using our drag-and-drop studio!
-            </p>
+          <div className="p-8 rounded-xl border border-zinc-800 bg-zinc-950/30 text-center space-y-2">
+            <p className="text-xs font-mono text-zinc-500">No public campus contests running right now.</p>
             <Link
               to="/contest/studio"
-              className="inline-block px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider"
+              className="inline-block px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-zinc-300 text-xs font-medium border border-zinc-800"
             >
-              Open Contest Studio
+              Build your own contest stage
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {publicContests.map((c) => (
               <div
                 key={c.id}
-                className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 hover:border-slate-700 transition-all shadow-md"
+                className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 transition-colors space-y-3"
               >
                 <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-zinc-800 text-zinc-300">
                     {c.status.replace('_', ' ')}
                   </span>
-                  <span className="text-slate-400 text-[10px]">
-                    {c.maxParticipants === 0 ? 'Unlimited Cap' : `${c.participantCount}/${c.maxParticipants}`}
+                  <span className="text-zinc-500 text-[11px]">
+                    {c.maxParticipants === 0 ? 'Unlimited' : `${c.participantCount}/${c.maxParticipants}`} Contenders
                   </span>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-bold text-white line-clamp-1">{c.title}</h4>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    By <strong className="text-slate-300">{c.creatorName}</strong> ({c.creatorCollege})
+                  <h4 className="text-sm font-semibold text-zinc-100 line-clamp-1">{c.title}</h4>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    By <strong className="text-zinc-300">{c.creatorName}</strong> ({c.creatorCollege})
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-2 border-t border-slate-800/80">
-                  <span>{c.stageCount} Formats</span>
-                  <span>{c.participantCount} Registered</span>
+                <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between">
+                  <span className="text-xs font-mono text-zinc-500">{c.stageCount} Stages</span>
+                  <Link
+                    to={`/contest/${c.slug}`}
+                    className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition-colors"
+                  >
+                    View Contest
+                  </Link>
                 </div>
-
-                <Link
-                  to={`/contest/${c.slug}`}
-                  className="block w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs uppercase tracking-wider text-center border border-slate-700 transition-colors"
-                >
-                  View Contest
-                </Link>
               </div>
             ))}
           </div>

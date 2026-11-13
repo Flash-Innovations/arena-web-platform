@@ -2,12 +2,52 @@
 
 :root {
   color-scheme: dark;
+  --bg-base: #09090b;
+  --bg-surface: #121215;
+  --bg-subtle: #18181b;
+  --border-muted: #27272a;
+  --border-strong: #3f3f46;
+  --text-primary: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-dim: #71717a;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #020617;
-  color: #f8fafc;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, kbd, pre, samp, .font-mono {
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", "Geist Mono", Menlo, Consolas, monospace;
+}
+
+/* Precision scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Clean text selection */
+::selection {
+  background-color: #2563eb;
+  color: #ffffff;
 }
