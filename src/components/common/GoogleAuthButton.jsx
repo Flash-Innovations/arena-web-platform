@@ -31,6 +31,11 @@ export function GoogleAuthButton({
   className = ''
 }) {
   const buttonRef = useRef(null);
+  const callbackRef = useRef(onSuccess);
+  callbackRef.current = onSuccess;
+  const errorRef = useRef(onError);
+  errorRef.current = onError;
+
   const [gisRendered, setGisRendered] = useState(false);
   const [demoEmail, setDemoEmail] = useState('gladiator@arena.flashedu.in');
   const [isDemoOpen, setIsDemoOpen] = useState(false);
@@ -49,18 +54,21 @@ export function GoogleAuthButton({
       if (!clientId || !window.google?.accounts?.id || !buttonRef.current) return false;
 
       try {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response) => {
-            if (response && response.credential) {
-              onSuccess?.(response.credential);
-            } else {
-              onError?.(new Error('No credential received from Google.'));
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
+        if (window.__GSI_ARENA_INITIALIZED_ID__ !== clientId) {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => {
+              if (response && response.credential) {
+                callbackRef.current?.(response.credential);
+              } else {
+                errorRef.current?.(new Error('No credential received from Google.'));
+              }
+            },
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+          window.__GSI_ARENA_INITIALIZED_ID__ = clientId;
+        }
 
         buttonRef.current.innerHTML = '';
         window.google.accounts.id.renderButton(buttonRef.current, {

@@ -1,9 +1,26 @@
 const API_BASE = (import.meta.env.VITE_ARENA_API_URL || 'http://localhost:5050').replace(/\/+$/, '');
 
+export const getArenaToken = () => {
+  try {
+    return localStorage.getItem('arena_token') || null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const setArenaToken = (token) => {
+  try {
+    if (token) localStorage.setItem('arena_token', token);
+    else localStorage.removeItem('arena_token');
+  } catch (e) {}
+};
+
 async function arenaRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const token = getArenaToken();
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };
 

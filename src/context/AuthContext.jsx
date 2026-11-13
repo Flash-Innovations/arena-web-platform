@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import arenaApi from '../api/arenaApi';
+import arenaApi, { getArenaToken, setArenaToken } from '../api/arenaApi';
 
 const AuthContext = createContext(null);
 
 const SPECTATOR_LIMIT = 3;
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('arena_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [authModal, setAuthModal] = useState({
     isOpen: false,
@@ -15,7 +22,7 @@ export function AuthProvider({ children }) {
     message: ''
   });
 
-  // Verify active session on load via HTTP-only cookie / backend verification
+  // Verify active session on load via token / HTTP-only cookie
   const checkSession = useCallback(async () => {
     try {
       const res = await arenaApi.getMe();
@@ -25,16 +32,23 @@ export function AuthProvider({ children }) {
           localStorage.setItem('arena_user', JSON.stringify(res.user));
         } catch (e) {}
       } else {
+        const token = getArenaToken();
+        if (!token) {
+          setUser(null);
+          try {
+            localStorage.removeItem('arena_user');
+          } catch (e) {}
+        }
+      }
+    } catch (err) {
+      const msg = err.message || '';
+      if (msg.includes('401') || msg.includes('UNAUTHORIZED') || msg.includes('INVALID_TOKEN')) {
+        setArenaToken(null);
         setUser(null);
         try {
           localStorage.removeItem('arena_user');
         } catch (e) {}
       }
-    } catch (err) {
-      setUser(null);
-      try {
-        localStorage.removeItem('arena_user');
-      } catch (e) {}
     } finally {
       setLoading(false);
     }
@@ -59,7 +73,8 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await arenaApi.login({ email, password });
-    if (data && data.user) {
+    if (data?.token) setArenaToken(data.token);
+    if (data?.user) {
       setUser(data.user);
       try {
         localStorage.setItem('arena_user', JSON.stringify(data.user));
@@ -71,7 +86,8 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     const data = await arenaApi.register(userData);
-    if (data && data.user) {
+    if (data?.token) setArenaToken(data.token);
+    if (data?.user) {
       setUser(data.user);
       try {
         localStorage.setItem('arena_user', JSON.stringify(data.user));
@@ -83,7 +99,8 @@ export function AuthProvider({ children }) {
 
   const googleSignIn = async (credential) => {
     const data = await arenaApi.googleSignIn({ credential });
-    if (data && data.user) {
+    if (data?.token) setArenaToken(data.token);
+    if (data?.user) {
       setUser(data.user);
       try {
         localStorage.setItem('arena_user', JSON.stringify(data.user));
@@ -95,7 +112,8 @@ export function AuthProvider({ children }) {
 
   const googleRegister = async (userData) => {
     const data = await arenaApi.googleRegister(userData);
-    if (data && data.user) {
+    if (data?.token) setArenaToken(data.token);
+    if (data?.user) {
       setUser(data.user);
       try {
         localStorage.setItem('arena_user', JSON.stringify(data.user));
@@ -106,12 +124,13 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    try {
-      await arenaApi.logout();
-    } catch (e) {}
+    setArenaToken(null);
     setUser(null);
     try {
       localStorage.removeItem('arena_user');
+    } catch (e) {}
+    try {
+      await arenaApi.logout();
     } catch (e) {}
   };
 
