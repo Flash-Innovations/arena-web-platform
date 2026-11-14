@@ -90,6 +90,9 @@ export const arenaApi = {
   requestRematch: (roomCode) =>
     arenaRequest(`/api/arena/battle/${roomCode}/rematch`, { method: 'POST' }),
 
+  forfeitMatch: (roomCode) =>
+    arenaRequest(`/api/arena/battle/${roomCode}/forfeit`, { method: 'POST' }),
+
   // Flash Coding Series Tournament
   getTournamentOverview: () =>
     arenaRequest('/api/arena/tournament/overview', { method: 'GET' }),

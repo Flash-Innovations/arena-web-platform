@@ -1,7 +1,15 @@
 import React from 'react';
-import { Timer, Radio } from 'lucide-react';
+import { Timer, Radio, Flag, Wifi, WifiOff } from 'lucide-react';
 
-export function BattleHUD({ match, opponentProgress, timeRemainingSeconds }) {
+export function BattleHUD({
+  match,
+  opponentProgress,
+  timeRemainingSeconds,
+  opponentStatus = 'ONLINE',
+  disconnectGraceSeconds = null,
+  onForfeit,
+  isCompetitor = false
+}) {
   const p1 = match?.player1 || {};
   const p2 = match?.player2 || {};
 
@@ -61,17 +69,37 @@ export function BattleHUD({ match, opponentProgress, timeRemainingSeconds }) {
           </div>
         </div>
 
-        {/* Center: Real-Time Chess Clock & Match Room Code */}
+        {/* Center: Real-Time Chess Clock, Room Code & Forfeit */}
         <div className="flex flex-col items-center justify-center shrink-0">
-          <div className="flex items-center gap-2 px-2.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-sm font-bold tracking-wider">
-            <Timer className={`w-3.5 h-3.5 ${isCriticalTime ? 'text-amber-400' : 'text-zinc-400'}`} />
-            <span className={isCriticalTime ? 'text-amber-400 font-mono font-black' : 'text-zinc-100'}>
-              {formatTime(timeRemainingSeconds)}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-2.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-sm font-bold tracking-wider">
+              <Timer className={`w-3.5 h-3.5 ${isCriticalTime ? 'text-amber-400' : 'text-zinc-400'}`} />
+              <span className={isCriticalTime ? 'text-amber-400 font-mono font-black' : 'text-zinc-100'}>
+                {formatTime(timeRemainingSeconds)}
+              </span>
+            </div>
+
+            {isCompetitor && match?.status === 'IN_PROGRESS' && onForfeit && (
+              <button
+                onClick={onForfeit}
+                title="Forfeit match and concede to opponent"
+                className="px-2 py-0.5 rounded text-[11px] font-mono text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-zinc-800 hover:border-rose-500/20 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <Flag className="w-3 h-3" />
+                <span className="hidden sm:inline">Forfeit</span>
+              </button>
+            )}
           </div>
-          <span className="text-[10px] font-mono text-zinc-500 tracking-tight mt-0.5">
-            {match?.roomCode || 'FLASH-DUEL'} · {match?.gameMode?.replace('_', ' ')}
-          </span>
+
+          <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500 tracking-tight mt-0.5">
+            <span>{match?.roomCode || 'FLASH-DUEL'} · {match?.gameMode?.replace('_', ' ')}</span>
+            {opponentStatus === 'DISCONNECTED' && (
+              <span className="text-rose-400 flex items-center gap-1 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 animate-pulse">
+                <WifiOff className="w-2.5 h-2.5" />
+                <span>Opponent Offline ({disconnectGraceSeconds || 45}s)</span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Right: Player 2 (Opponent) */}

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { arenaApi } from '../api/arenaApi';
+import { getSocket } from '../api/socket';
 import { useAuth } from '../context/AuthContext';
 import { BattleHUD } from '../components/battle/BattleHUD';
 import { CodeEditor } from '../components/battle/CodeEditor';
@@ -12,7 +13,9 @@ import {
   Check,
   MessageSquare,
   Lock,
-  ArrowRight
+  ArrowRight,
+  Monitor,
+  Laptop
 } from 'lucide-react';
 
 export function BattleRoomPage() {
@@ -32,10 +35,25 @@ export function BattleRoomPage() {
   const [isVictoryModalOpen, setIsVictoryModalOpen] = useState(false);
   const [isWinner, setIsWinner] = useState(false);
   const [winReason, setWinReason] = useState(null);
+  const [ratingChange, setRatingChange] = useState(null);
+  const [newRating, setNewRating] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [tabBlurViolations, setTabBlurViolations] = useState(0);
   const [copied, setCopied] = useState(false);
   const [isSpectatorGated, setIsSpectatorGated] = useState(false);
+
+  // Real-time Opponent Connection & Grace Period State
+  const [opponentStatus, setOpponentStatus] = useState('ONLINE');
+  const [disconnectGraceSeconds, setDisconnectGraceSeconds] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Responsive mobile screen detector
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 1. Guest Spectator Policy: 3 Matches Max Per Device
   useEffect(() => {
@@ -46,6 +64,12 @@ export function BattleRoomPage() {
     const allowed = canSpectateMatch(roomCode);
     setIsSpectatorGated(!allowed);
   }, [roomCode, isAuthenticated, canSpectateMatch]);
+
+  // Determine if current user is Player 1 or Player 2
+  const currentUserId = user?._id || user?.id;
+  const isP1 = Boolean(currentUserId && match?.player1?.userId?.toString() === currentUserId.toString());
+  const isP2 = Boolean(currentUserId && match?.player2?.userId?.toString() === currentUserId.toString());
+  const isCompetitor = isP1 || isP2;
 
   // 2. Fetch Initial Match State
   useEffect(() => {
@@ -68,7 +92,81 @@ export function BattleRoomPage() {
     return () => { isMounted = false; };
   }, [roomCode, language]);
 
-  // 3. Heartbeat Loop
+  // 3. Socket.io Real-Time Room Subscription
+  useEffect(() => {
+    if (!roomCode) return;
+    const socket = getSocket();
+
+    socket.emit('join_room', {
+      roomCode,
+      userId: currentUserId,
+      name: user?.name,
+      avatar: user?.avatar,
+      college: user?.collegeName,
+      isSpectator: !isCompetitor
+    });
+
+    socket.on('opponent_progress', (data) => {
+      setOpponentProgress(data);
+    });
+
+    socket.on('opponent_disconnected', ({ graceSeconds }) => {
+      setOpponentStatus('DISCONNECTED');
+      setDisconnectGraceSeconds(graceSeconds || 45);
+    });
+
+    socket.on('opponent_reconnected', () => {
+      setOpponentStatus('ONLINE');
+      setDisconnectGraceSeconds(null);
+    });
+
+    socket.on('match_updated', (data) => {
+      if (data.type === 'MATCH_COMPLETED' && data.match) {
+        setMatch(data.match);
+        const won = currentUserId && data.winnerId && data.winnerId.toString() === currentUserId.toString();
+        setIsWinner(Boolean(won));
+        setWinReason(data.winReason || data.match.winReason);
+        const change = isP1 ? data.match.player1?.ratingChange : data.match.player2?.ratingChange;
+        const nRating = isP1 ? data.match.player1?.newRating : data.match.player2?.newRating;
+        setRatingChange(change);
+        setNewRating(nRating);
+        setIsVictoryModalOpen(true);
+      } else if (data.type === 'CHECKIN_UPDATE' && data.match) {
+        setMatch(data.match);
+      } else if (data.type === 'REMATCH_REDIRECT' && data.rematchRoomCode) {
+        window.location.href = `/battle/${data.rematchRoomCode}`;
+      }
+    });
+
+    socket.on('match_completed', (data) => {
+      if (data.match) setMatch(data.match);
+      const won = currentUserId && data.winnerId && data.winnerId.toString() === currentUserId.toString();
+      setIsWinner(Boolean(won));
+      setWinReason(data.winReason);
+      const change = isP1 ? data.match?.player1?.ratingChange : data.match?.player2?.ratingChange;
+      const nRating = isP1 ? data.match?.player1?.newRating : data.match?.player2?.newRating;
+      setRatingChange(change);
+      setNewRating(nRating);
+      setIsVictoryModalOpen(true);
+    });
+
+    socket.on('rematch_redirect', ({ rematchRoomCode }) => {
+      if (rematchRoomCode && rematchRoomCode !== roomCode) {
+        window.location.href = `/battle/${rematchRoomCode}`;
+      }
+    });
+
+    return () => {
+      socket.off('opponent_progress');
+      socket.off('opponent_disconnected');
+      socket.off('opponent_reconnected');
+      socket.off('match_updated');
+      socket.off('match_completed');
+      socket.off('rematch_redirect');
+    };
+  }, [roomCode, currentUserId, user, isCompetitor, isP1, isP2]);
+
+  // 4. Graceful Fallback Presence / Heartbeat (Relaxed 10s Interval)
   useEffect(() => {
     if (!match) return;
 
@@ -76,17 +174,15 @@ export function BattleRoomPage() {
       arenaApi.sendHeartbeat(roomCode, tabBlurViolations)
         .then((res) => {
           if (res && res.success) {
-            setOpponentProgress(res.opponent);
+            if (res.opponent) setOpponentProgress(res.opponent);
 
-            // Follow rematch redirect if opponent initiated
             if (res.rematchRoomCode && res.rematchRoomCode !== roomCode) {
               window.location.href = `/battle/${res.rematchRoomCode}`;
             }
 
-            // If match completed externally by opponent or timeout
             if (res.matchStatus === 'COMPLETED' && match.status !== 'COMPLETED') {
               setMatch((prev) => ({ ...prev, status: 'COMPLETED' }));
-              const won = res.winnerId && match?.player1?.userId === res.winnerId;
+              const won = res.winnerId && currentUserId && currentUserId.toString() === res.winnerId.toString();
               setIsWinner(Boolean(won));
               setWinReason(res.winReason);
               setIsVictoryModalOpen(true);
@@ -94,12 +190,12 @@ export function BattleRoomPage() {
           }
         })
         .catch(() => {});
-    }, 2500);
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [roomCode, match, tabBlurViolations]);
+  }, [roomCode, match, tabBlurViolations, currentUserId]);
 
-  // 4. Match Countdown Timer
+  // 5. Match Countdown Timer
   useEffect(() => {
     if (!match?.actualStartTime || match?.status !== 'IN_PROGRESS') return;
 
@@ -119,6 +215,21 @@ export function BattleRoomPage() {
     return () => clearInterval(timer);
   }, [match?.actualStartTime, match?.status, match?.durationMinutes]);
 
+  // 6. Disconnect Grace Period Countdown
+  useEffect(() => {
+    if (disconnectGraceSeconds === null || disconnectGraceSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setDisconnectGraceSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [disconnectGraceSeconds]);
+
   const handleCheckIn = async () => {
     try {
       const res = await arenaApi.checkIn(roomCode);
@@ -128,6 +239,8 @@ export function BattleRoomPage() {
           status: res.status,
           actualStartTime: res.actualStartTime
         }));
+        const socket = getSocket();
+        socket.emit('check_in', { roomCode, userId: currentUserId });
       }
     } catch (err) {
       setErrorMsg(err.message || 'Check-in failed.');
@@ -140,6 +253,14 @@ export function BattleRoomPage() {
       const res = await arenaApi.submitCode(roomCode, { code, language });
       if (res && res.results) {
         setTestResults(res.results);
+        const socket = getSocket();
+        socket.emit('code_progress', {
+          roomCode,
+          userId: currentUserId,
+          testCasesPassed: res.testCasesPassed,
+          totalTestCases: res.totalTestCases,
+          codeLength: (code || '').trim().length
+        });
       }
     } catch (err) {
       setErrorMsg(err.message || 'Execution failed.');
@@ -156,7 +277,9 @@ export function BattleRoomPage() {
         setTestResults(res.results || []);
         if (res.isWinner) {
           setIsWinner(true);
-          setWinReason('FIRST_AC');
+          setWinReason(res.winReason || 'FIRST_AC');
+          setRatingChange(res.ratingChange);
+          setNewRating(res.newRating);
           setIsVictoryModalOpen(true);
         }
       }
@@ -167,6 +290,25 @@ export function BattleRoomPage() {
     }
   };
 
+  const handleForfeit = async () => {
+    const confirmed = window.confirm('Are you sure you want to forfeit this duel? Your opponent will be awarded the victory.');
+    if (!confirmed) return;
+
+    try {
+      const res = await arenaApi.forfeitMatch(roomCode);
+      if (res.success) {
+        setMatch(res.match);
+        setIsWinner(false);
+        setWinReason('FORFEIT');
+        setRatingChange(isP1 ? res.match?.player1?.ratingChange : res.match?.player2?.ratingChange);
+        setNewRating(isP1 ? res.match?.player1?.newRating : res.match?.player2?.newRating);
+        setIsVictoryModalOpen(true);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to forfeit match.');
+    }
+  };
+
   const handleCopyLink = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url);
@@ -174,7 +316,7 @@ export function BattleRoomPage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const shareText = `1v1 Code Duel on Flash Arena. Room: ${roomCode}. Join: ${window.location.href}`;
+  const shareText = `1v1 Code Duel on Flash Arena! Room: ${roomCode}. Join here: ${window.location.href}`;
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
   if (isSpectatorGated) {
@@ -222,9 +364,29 @@ export function BattleRoomPage() {
         match={match}
         opponentProgress={opponentProgress}
         timeRemainingSeconds={timeRemainingSeconds}
+        opponentStatus={opponentStatus}
+        disconnectGraceSeconds={disconnectGraceSeconds}
+        onForfeit={handleForfeit}
+        isCompetitor={isCompetitor}
       />
 
-      {/* Check-In Pre-Battle Lobby */}
+      {/* Mobile Spectator Awareness Banner */}
+      {isMobile && (
+        <div className="bg-indigo-950/70 border-b border-indigo-800/60 px-4 py-2 text-xs font-mono text-indigo-200 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Laptop className="w-4 h-4 text-indigo-400 shrink-0" />
+            <span>Mobile Live View: Coding battles are optimized for desktop/laptop keyboards.</span>
+          </div>
+          <button
+            onClick={handleCopyLink}
+            className="px-2 py-0.5 rounded bg-indigo-900 hover:bg-indigo-850 border border-indigo-700 text-indigo-100 text-[11px] shrink-0 cursor-pointer"
+          >
+            {copied ? 'Copied' : 'Copy Desktop Link'}
+          </button>
+        </div>
+      )}
+
+      {/* Pre-Battle Chamber / Ready-up Room */}
       {match?.status === 'CHECKIN_OPEN' || match?.status === 'WAITING_FOR_OPPONENT' ? (
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="max-w-md w-full p-6 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-5 shadow-xl">
@@ -242,7 +404,7 @@ export function BattleRoomPage() {
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Invite your opponent using the room code or link below. When both contenders check in, the dual timer begins.
+              Invite your opponent using the room code or WhatsApp link below. When both contenders confirm ready, the match countdown begins.
             </p>
 
             {/* Quick Share Buttons */}
@@ -265,12 +427,33 @@ export function BattleRoomPage() {
               </button>
             </div>
 
-            <button
-              onClick={handleCheckIn}
-              className="w-full py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer"
-            >
-              Confirm Ready &amp; Check In
-            </button>
+            {isCompetitor ? (
+              <button
+                onClick={handleCheckIn}
+                className="w-full py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Confirm Ready &amp; Check In
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal({
+                      mode: 'signin',
+                      title: 'Sign In to Duel',
+                      message: 'Sign in to accept this challenge and enter the arena as Player 2.'
+                    });
+                  } else {
+                    arenaApi.getMatch(roomCode).then(res => {
+                      if (res?.success) setMatch(res.match);
+                    });
+                  }
+                }}
+                className="w-full py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                {isAuthenticated ? 'Join as Contender' : 'Sign In to Join Duel'}
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -363,12 +546,14 @@ export function BattleRoomPage() {
         </div>
       )}
 
-      {/* Sudden Death Victory / Defeat Modal */}
+      {/* Sudden Death Victory / Defeat Modal with Elo Delta */}
       <VictoryModal
         isOpen={isVictoryModalOpen}
         isWinner={isWinner}
         match={match}
         winReason={winReason}
+        ratingChange={ratingChange}
+        newRating={newRating}
         onPlayAgain={() => navigate('/')}
       />
 
