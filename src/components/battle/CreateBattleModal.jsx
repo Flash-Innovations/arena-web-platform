@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, MessageSquare, Terminal, ChevronRight } from 'lucide-react';
 import arenaApi from '../../api/arenaApi';
+import { useAuth } from '../../context/AuthContext';
 
 const GAME_MODES = [
   {
@@ -35,6 +36,7 @@ const CATEGORIES = [
 ];
 
 export function CreateBattleModal({ isOpen, onClose }) {
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [queueType, setQueueType] = useState('RANKED');
   const [gameMode, setGameMode] = useState('SPEED_DSA');
   const [difficulty, setDifficulty] = useState('MEDIUM');
@@ -54,6 +56,16 @@ export function CreateBattleModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const handleCreate = async () => {
+    if (!isAuthenticated) {
+      onClose();
+      openAuthModal({
+        mode: 'signin',
+        title: 'Sign In to Create Duel',
+        message: 'Sign in to create custom battle rooms, set rules, and challenge other competitors.'
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -97,7 +109,17 @@ export function CreateBattleModal({ isOpen, onClose }) {
         setCreatedRoom(res);
       }
     } catch (err) {
-      setError(err.message || 'Failed to create battle room.');
+      const msg = err.message || '';
+      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
+        onClose();
+        openAuthModal({
+          mode: 'signin',
+          title: 'Sign In to Create Duel',
+          message: 'Your session has expired. Please sign in to create battle rooms.'
+        });
+        return;
+      }
+      setError(msg || 'Failed to create battle room.');
     } finally {
       setLoading(false);
     }

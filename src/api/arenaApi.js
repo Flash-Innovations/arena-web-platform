@@ -2,7 +2,40 @@ const API_BASE = (import.meta.env.VITE_ARENA_API_URL || 'http://localhost:5050')
 
 export const getArenaToken = () => {
   try {
-    return localStorage.getItem('arena_token') || null;
+    // 1. Check URL parameters for cross-domain redirect handshakes
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token') || params.get('auth_token');
+      if (urlToken) {
+        localStorage.setItem('arena_token', urlToken);
+        localStorage.setItem('flash_token', urlToken);
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('token');
+        cleanUrl.searchParams.delete('auth_token');
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+        return urlToken;
+      }
+    }
+
+    // 2. Check localStorage across all common FLASH token keys
+    const localToken =
+      localStorage.getItem('arena_token') ||
+      localStorage.getItem('flash_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('b2c_token') ||
+      localStorage.getItem('auth_token');
+
+    if (localToken) return localToken;
+
+    // 3. Check document.cookie if available (.flashedu.in shared domain)
+    if (typeof document !== 'undefined' && document.cookie) {
+      const match = document.cookie.match(/(?:arena_token|flash_token|b2c_token|token)=([^;]+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    return null;
   } catch (e) {
     return null;
   }
@@ -10,8 +43,17 @@ export const getArenaToken = () => {
 
 export const setArenaToken = (token) => {
   try {
-    if (token) localStorage.setItem('arena_token', token);
-    else localStorage.removeItem('arena_token');
+    if (token) {
+      localStorage.setItem('arena_token', token);
+      localStorage.setItem('flash_token', token);
+    } else {
+      localStorage.removeItem('arena_token');
+      localStorage.removeItem('flash_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('b2c_token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('arena_user');
+    }
   } catch (e) {}
 };
 
@@ -33,7 +75,11 @@ async function arenaRequest(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.message || `Arena API Error: ${response.status}`);
+    const error = new Error(data.message || `Arena API Error: ${response.status}`);
+    error.status = response.status;
+    error.code = data.code || 'API_ERROR';
+    error.data = data;
+    throw error;
   }
 
   return data;

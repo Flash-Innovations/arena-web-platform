@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Trophy, ArrowRight, ShieldCheck, Ticket, Calendar, ChevronRight } from 'lucide-react';
 import arenaApi from '../api/arenaApi';
+import { useAuth } from '../context/AuthContext';
 
 export function TournamentHubPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registered, setRegistered] = useState(false);
@@ -35,6 +38,15 @@ export function TournamentHubPage() {
   }, []);
 
   const handleRegister = async () => {
+    if (!isAuthenticated) {
+      openAuthModal({
+        mode: 'signin',
+        title: 'Sign In to Register for Tournament',
+        message: 'Sign in to register for Flash Coding Series 2026 and secure your slot in the 512 knockout bracket.'
+      });
+      return;
+    }
+
     try {
       setRegistering(true);
       setMessage(null);
@@ -44,7 +56,16 @@ export function TournamentHubPage() {
         setMessage('Successfully registered for Flash Coding Series 2026.');
       }
     } catch (err) {
-      setMessage(err.message || 'Registration failed.');
+      const msg = err.message || '';
+      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
+        openAuthModal({
+          mode: 'signin',
+          title: 'Sign In to Register for Tournament',
+          message: 'Your session has expired. Please sign in to register for the tournament.'
+        });
+        return;
+      }
+      setMessage(msg || 'Registration failed.');
     } finally {
       setRegistering(false);
     }
@@ -127,12 +148,22 @@ export function TournamentHubPage() {
             View Knockout Tree
           </Link>
 
-          <Link
-            to="/series/quiz"
-            className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-zinc-300 text-xs font-medium border border-zinc-800 transition-colors"
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                openAuthModal({
+                  mode: 'signin',
+                  title: 'Sign In to Take Qualifying Quiz',
+                  message: 'Sign in with your student account to record your quiz submission and qualify for the bracket.'
+                });
+              } else {
+                navigate('/series/quiz');
+              }
+            }}
+            className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-zinc-300 text-xs font-medium border border-zinc-800 transition-colors cursor-pointer"
           >
             Stage 1 Quiz
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -150,13 +181,23 @@ export function TournamentHubPage() {
               20-minute timed CS and Aptitude assessment. Top 512 scorers qualify for round 1.
             </p>
             <div className="pt-1">
-              <Link
-                to="/series/quiz"
-                className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300"
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    openAuthModal({
+                      mode: 'signin',
+                      title: 'Sign In to Take Qualifying Quiz',
+                      message: 'Sign in with your student account to take the Stage 1 quiz.'
+                    });
+                  } else {
+                    navigate('/series/quiz');
+                  }
+                }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 cursor-pointer"
               >
                 <span>Take Quiz</span>
                 <ArrowRight className="w-3 h-3" />
-              </Link>
+              </button>
             </div>
           </div>
 

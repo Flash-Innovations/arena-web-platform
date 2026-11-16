@@ -16,9 +16,11 @@ import {
   MessageSquare
 } from 'lucide-react';
 import arenaApi from '../api/arenaApi';
+import { useAuth } from '../context/AuthContext';
 
 export function ContestViewPage() {
   const { slug } = useParams();
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [contest, setContest] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,14 @@ export function ContestViewPage() {
   }, [slug]);
 
   const handleRegister = async () => {
+    if (!isAuthenticated) {
+      openAuthModal({
+        mode: 'signin',
+        title: 'Sign In to Register',
+        message: 'Sign in to register for this contest and compete on the live leaderboard.'
+      });
+      return;
+    }
     try {
       setRegistering(true);
       setError(null);
@@ -59,7 +69,16 @@ export function ContestViewPage() {
         await fetchContest();
       }
     } catch (err) {
-      setError(err.message || 'Registration failed.');
+      const msg = err.message || '';
+      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
+        openAuthModal({
+          mode: 'signin',
+          title: 'Sign In to Register',
+          message: 'Your session has expired. Please sign in to register for this contest.'
+        });
+        return;
+      }
+      setError(msg || 'Registration failed.');
     } finally {
       setRegistering(false);
     }

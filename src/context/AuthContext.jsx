@@ -8,6 +8,11 @@ const SPECTATOR_LIMIT = 3;
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
+      const token = getArenaToken();
+      if (!token) {
+        localStorage.removeItem('arena_user');
+        return null;
+      }
       const saved = localStorage.getItem('arena_user');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
@@ -24,6 +29,16 @@ export function AuthProvider({ children }) {
 
   // Verify active session on load via token / HTTP-only cookie
   const checkSession = useCallback(async () => {
+    const token = getArenaToken();
+    if (!token) {
+      setUser(null);
+      try {
+        localStorage.removeItem('arena_user');
+      } catch (e) {}
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await arenaApi.getMe();
       if (res && res.success && res.user) {
@@ -32,17 +47,22 @@ export function AuthProvider({ children }) {
           localStorage.setItem('arena_user', JSON.stringify(res.user));
         } catch (e) {}
       } else {
-        const token = getArenaToken();
-        if (!token) {
-          setUser(null);
-          try {
-            localStorage.removeItem('arena_user');
-          } catch (e) {}
-        }
+        setArenaToken(null);
+        setUser(null);
+        try {
+          localStorage.removeItem('arena_user');
+        } catch (e) {}
       }
     } catch (err) {
-      const msg = err.message || '';
-      if (msg.includes('401') || msg.includes('UNAUTHORIZED') || msg.includes('INVALID_TOKEN')) {
+      const msg = (err.message || '').toLowerCase();
+      if (
+        err.status === 401 ||
+        err.code === 'UNAUTHORIZED' ||
+        msg.includes('auth') ||
+        msg.includes('401') ||
+        msg.includes('unauthorized') ||
+        msg.includes('token')
+      ) {
         setArenaToken(null);
         setUser(null);
         try {
@@ -185,7 +205,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({
     user,
     loading,
-    isAuthenticated: Boolean(user),
+    isAuthenticated: Boolean(user && getArenaToken()),
     authModal,
     openAuthModal,
     closeAuthModal,

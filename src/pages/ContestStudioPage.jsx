@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import arenaApi from '../api/arenaApi';
 import QuestionBankModal from '../components/contest/QuestionBankModal';
+import { useAuth } from '../context/AuthContext';
 
 const AVAILABLE_STAGE_TYPES = [
   {
@@ -176,6 +177,7 @@ const PRESETS = [
 
 export function ContestStudioPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal } = useAuth();
 
   // Contest Metadata
   const [title, setTitle] = useState('');
@@ -296,6 +298,14 @@ export function ContestStudioPage() {
 
   const handlePublish = async (e) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal({
+        mode: 'signin',
+        title: 'Sign In to Publish Contest',
+        message: 'Sign in with your student account to configure modular stages and host campus contests.'
+      });
+      return;
+    }
     if (!title.trim()) {
       setError('Please provide a contest title.');
       return;
@@ -325,7 +335,16 @@ export function ContestStudioPage() {
         setPublishedContest(res);
       }
     } catch (err) {
-      setError(err.message || 'Failed to create contest.');
+      const msg = err.message || '';
+      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
+        openAuthModal({
+          mode: 'signin',
+          title: 'Sign In to Publish Contest',
+          message: 'Your session has expired. Please sign in to publish your contest.'
+        });
+        return;
+      }
+      setError(msg || 'Failed to create contest.');
     } finally {
       setLoading(false);
     }

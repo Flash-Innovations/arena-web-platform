@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Timer, ArrowRight, ArrowLeft, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Timer, ArrowRight, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 import { arenaApi } from '../api/arenaApi';
+import { useAuth } from '../context/AuthContext';
 
 export function TournamentQuizPage() {
+  const { isAuthenticated, openAuthModal } = useAuth();
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -36,7 +38,7 @@ export function TournamentQuizPage() {
     }
 
     loadQuiz();
-  }, []);
+  }, [isAuthenticated]);
 
   // Timer countdown
   useEffect(() => {
@@ -101,16 +103,42 @@ export function TournamentQuizPage() {
   }
 
   if (loadError) {
+    const isAuthError =
+      !isAuthenticated ||
+      loadError.toLowerCase().includes('auth') ||
+      loadError.includes('401') ||
+      loadError.includes('UNAUTHORIZED');
+
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
         <div className="w-10 h-10 mx-auto rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-amber-400">
-          <AlertCircle className="w-5 h-5" />
+          {isAuthError ? <Lock className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
         </div>
         <div>
-          <h2 className="text-sm font-bold text-zinc-100">Access Restricted</h2>
-          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{loadError}</p>
+          <h2 className="text-sm font-bold text-zinc-100">
+            {isAuthError ? 'Authentication Required' : 'Access Restricted'}
+          </h2>
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+            {isAuthError
+              ? 'Please sign in with your student account to access the official Stage 1 Qualifying Quiz and record your score.'
+              : loadError}
+          </p>
         </div>
-        <div className="pt-2">
+        <div className="pt-2 flex items-center justify-center gap-2">
+          {isAuthError && (
+            <button
+              onClick={() =>
+                openAuthModal({
+                  mode: 'signin',
+                  title: 'Sign In to Take Qualifying Quiz',
+                  message: 'Sign in to access Stage 1 quiz questions and enter tournament seeding.'
+                })
+              }
+              className="px-4 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Sign In to Take Quiz
+            </button>
+          )}
           <a
             href="/series"
             className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition-colors"

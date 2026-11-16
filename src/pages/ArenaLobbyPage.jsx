@@ -151,7 +151,16 @@ export function ArenaLobbyPage() {
         }
       }
     } catch (err) {
-      setMatchmakingError(err.message || 'Matchmaking error. Please retry.');
+      const msg = err.message || '';
+      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
+        openAuthModal({
+          mode: 'signin',
+          title: 'Sign In to Enter Arena Queue',
+          message: 'Your session has expired. Please sign in to enter matchmaking.'
+        });
+      } else {
+        setMatchmakingError(msg || 'Matchmaking error. Please retry.');
+      }
       cancelMatchmaking();
     }
   };
@@ -164,6 +173,15 @@ export function ArenaLobbyPage() {
 
   // Trigger AI Rival Fallback
   const spawnAiRival = async () => {
+    if (!isAuthenticated) {
+      openAuthModal({
+        mode: 'signin',
+        title: 'Sign In to Spar with AI Rival',
+        message: 'Sign in with your student account to challenge AI Rival bots and record your sparring performance.'
+      });
+      return;
+    }
+
     try {
       cancelMatchmaking();
       const res = await arenaApi.createAiRivalMatch({
@@ -174,7 +192,16 @@ export function ArenaLobbyPage() {
         navigate(`/battle/${res.roomCode}`);
       }
     } catch (err) {
-      setMatchmakingError(err.message || 'Failed to initialize AI Rival sparring session.');
+      const msg = err.message || '';
+      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
+        openAuthModal({
+          mode: 'signin',
+          title: 'Sign In to Spar with AI Rival',
+          message: 'Your session has expired. Please sign in to spar with AI Rival.'
+        });
+        return;
+      }
+      setMatchmakingError(msg || 'Failed to initialize AI Rival sparring session.');
     }
   };
 
