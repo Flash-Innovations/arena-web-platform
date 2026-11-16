@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Terminal, Trophy, ArrowUpRight, LogOut, User as UserIcon, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import GladiatorBadge from '../common/GladiatorBadge';
 
 export function ArenaNavbar() {
   const location = useLocation();
@@ -83,12 +84,8 @@ export function ArenaNavbar() {
           {/* Authentication State */}
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
-              {/* Rating ELO Badge */}
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-300">
-                <Trophy className="w-3 h-3 text-amber-400" />
-                <span className="font-semibold text-zinc-200">{user?.rating || 1200}</span>
-                <span className="text-zinc-500 text-[10px]">ELO</span>
-              </div>
+              {/* Gladiator Tier Badge */}
+              <GladiatorBadge elo={user?.rating || 1200} size="xs" />
 
               {/* User Pill */}
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-200">

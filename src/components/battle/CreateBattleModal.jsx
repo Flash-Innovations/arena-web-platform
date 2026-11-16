@@ -35,6 +35,7 @@ const CATEGORIES = [
 ];
 
 export function CreateBattleModal({ isOpen, onClose }) {
+  const [queueType, setQueueType] = useState('RANKED');
   const [gameMode, setGameMode] = useState('SPEED_DSA');
   const [difficulty, setDifficulty] = useState('MEDIUM');
   const [category, setCategory] = useState('All / Random');
@@ -58,6 +59,7 @@ export function CreateBattleModal({ isOpen, onClose }) {
       setError(null);
 
       const payload = {
+        queueType,
         gameMode,
         difficulty,
         category: category === 'All / Random' ? 'All' : category,
@@ -184,6 +186,45 @@ export function CreateBattleModal({ isOpen, onClose }) {
           ) : (
             /* Creation Controls */
             <div className="space-y-4">
+              {/* Match Stakes (Queue Type) */}
+              <div>
+                <label className="block text-[11px] font-mono font-semibold uppercase text-zinc-400 mb-2">
+                  Match Stakes
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQueueType('RANKED')}
+                    className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                      queueType === 'RANKED'
+                        ? 'bg-zinc-800/90 border-amber-500/70 text-zinc-100 shadow-sm'
+                        : 'bg-zinc-950/40 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="font-semibold text-xs text-zinc-200 flex items-center justify-between">
+                      <span>Ranked Duel</span>
+                      <span className="text-[10px] font-mono text-amber-400 uppercase font-bold">Elo +/-</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5">Gladiator Tier rating at stake</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQueueType('CASUAL')}
+                    className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                      queueType === 'CASUAL'
+                        ? 'bg-zinc-800/90 border-blue-500/70 text-zinc-100 shadow-sm'
+                        : 'bg-zinc-950/40 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="font-semibold text-xs text-zinc-200 flex items-center justify-between">
+                      <span>Casual Duel</span>
+                      <span className="text-[10px] font-mono text-blue-400 uppercase font-bold">0 Risk</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5">Friendly clash, rating preserved</div>
+                  </button>
+                </div>
+              </div>
+
               {/* Game Mode */}
               <div>
                 <label className="block text-[11px] font-mono font-semibold uppercase text-zinc-400 mb-2">

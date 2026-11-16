@@ -1,36 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
   ArrowRight,
   Search,
-  Filter,
   Users,
-  Layers,
   Trophy,
-  ArrowUpRight,
+  ChevronRight,
+  Swords,
+  Bot,
+  Loader2,
+  Sparkles,
   Shield,
-  Activity,
-  ChevronRight
+  Clock,
+  Zap,
+  Flame,
+  Award,
+  Calendar,
+  X
 } from 'lucide-react';
 import CreateBattleModal from '../components/battle/CreateBattleModal';
+import GladiatorBadge from '../components/common/GladiatorBadge';
+import { useAuth } from '../context/AuthContext';
 import arenaApi from '../api/arenaApi';
 
 export function ArenaLobbyPage() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [openBattles, setOpenBattles] = useState([]);
   const [publicContests, setPublicContests] = useState([]);
+  const [featuredContest, setFeaturedContest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
+  const [queueFilter, setQueueFilter] = useState('ALL'); // 'ALL' | 'RANKED' | 'CASUAL'
+
+  // Fast Matchmaking Queue State
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
+  const [matchmakingQueueType, setMatchmakingQueueType] = useState('RANKED');
+  const [searchTimer, setSearchTimer] = useState(0);
+  const [matchmakingError, setMatchmakingError] = useState(null);
+  const searchIntervalRef = useRef(null);
 
   useEffect(() => {
     async function loadLobbyData() {
       try {
         setLoading(true);
-        const [battlesRes, contestsRes] = await Promise.allSettled([
+        const [battlesRes, contestsRes, featuredRes] = await Promise.allSettled([
           arenaApi.getOpenBattles(),
-          arenaApi.getPublicContests()
+          arenaApi.getPublicContests(),
+          arenaApi.getFeaturedContest()
         ]);
 
         if (battlesRes.status === 'fulfilled' && battlesRes.value?.success) {
@@ -39,8 +60,11 @@ export function ArenaLobbyPage() {
         if (contestsRes.status === 'fulfilled' && contestsRes.value?.success) {
           setPublicContests(contestsRes.value.contests || []);
         }
+        if (featuredRes.status === 'fulfilled' && featuredRes.value?.success) {
+          setFeaturedContest(featuredRes.value.contest || null);
+        }
       } catch (e) {
-        // Fallback
+        // Fallback silently
       } finally {
         setLoading(false);
       }
@@ -64,6 +88,13 @@ export function ArenaLobbyPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Cleanup matchmaking timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+    };
+  }, []);
+
   const handleJoin = (e) => {
     e.preventDefault();
     if (roomCodeInput.trim()) {
@@ -71,9 +102,86 @@ export function ArenaLobbyPage() {
     }
   };
 
+  // Start Fast Matchmaking Queue
+  const startMatchmaking = async (queueType = 'RANKED') => {
+    if (!isAuthenticated) {
+      openAuthModal({
+        mode: 'signin',
+        title: 'Sign In to Enter Arena Queue',
+        message: 'Sign in with your student account to record match statistics and Gladiator Tier rankings.'
+      });
+      return;
+    }
+
+    setIsMatchmaking(true);
+    setMatchmakingQueueType(queueType);
+    setSearchTimer(0);
+    setMatchmakingError(null);
+
+    // Start UI timer
+    if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+    searchIntervalRef.current = setInterval(() => {
+      setSearchTimer((prev) => prev + 1);
+    }, 1000);
+
+    try {
+      const res = await arenaApi.matchmake({
+        queueType,
+        gameMode: 'SPEED_DSA',
+        difficulty: 'MEDIUM'
+      });
+
+      if (res.success && res.roomCode) {
+        if (res.matched) {
+          // Immediately found opponent
+          if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+          navigate(`/battle/${res.roomCode}`);
+        } else {
+          // Waiting in queue: Poll or wait for opponent join
+          const pollInterval = setInterval(async () => {
+            try {
+              const checkRes = await arenaApi.getMatch(res.roomCode);
+              if (checkRes.success && checkRes.match && checkRes.match.status !== 'WAITING_FOR_OPPONENT') {
+                clearInterval(pollInterval);
+                if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+                navigate(`/battle/${res.roomCode}`);
+              }
+            } catch (err) {}
+          }, 2500);
+        }
+      }
+    } catch (err) {
+      setMatchmakingError(err.message || 'Matchmaking error. Please retry.');
+      cancelMatchmaking();
+    }
+  };
+
+  const cancelMatchmaking = () => {
+    setIsMatchmaking(false);
+    setSearchTimer(0);
+    if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+  };
+
+  // Trigger AI Rival Fallback
+  const spawnAiRival = async () => {
+    try {
+      cancelMatchmaking();
+      const res = await arenaApi.createAiRivalMatch({
+        gameMode: 'SPEED_DSA',
+        difficulty: 'MEDIUM'
+      });
+      if (res.success && res.roomCode) {
+        navigate(`/battle/${res.roomCode}`);
+      }
+    } catch (err) {
+      setMatchmakingError(err.message || 'Failed to initialize AI Rival sparring session.');
+    }
+  };
+
   const filteredBattles = openBattles.filter((b) => {
-    if (activeTab === 'ALL') return true;
-    return b.gameMode === activeTab;
+    const modeMatch = activeTab === 'ALL' || b.gameMode === activeTab;
+    const queueMatch = queueFilter === 'ALL' || (b.queueType || 'RANKED') === queueFilter;
+    return modeMatch && queueMatch;
   });
 
   return (
@@ -84,8 +192,11 @@ export function ArenaLobbyPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold tracking-tight text-zinc-100">Battle Operations</h1>
             <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">
-              v2.1
+              v2.2
             </span>
+            {isAuthenticated && user && (
+              <GladiatorBadge elo={user.rating || 1200} size="sm" />
+            )}
           </div>
           <p className="text-xs text-zinc-400 mt-1">
             Real-time algorithmic duels, custom tournament stages, and collegiate knockout brackets.
@@ -120,41 +231,195 @@ export function ArenaLobbyPage() {
         </div>
       </div>
 
-      {/* Flagship Banner: Flash Coding Series Announcement */}
-      <div className="p-5 rounded-xl bg-zinc-900/70 border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="text-xs font-mono font-semibold text-amber-400 uppercase tracking-wider">
-              Flagship Tournament Series
+      {/* Dual Queue Quick-Play & Matchmaking HUD */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Ranked Matchmaking Card */}
+        <div className="p-5 rounded-xl bg-gradient-to-br from-zinc-900/90 to-zinc-950 border border-amber-500/30 hover:border-amber-500/50 transition-all space-y-3 relative overflow-hidden group">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
+                Ranked Queue
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-amber-950/60 text-amber-300 border border-amber-800/60">
+              Elo At Stake
             </span>
-            <span className="text-zinc-600">·</span>
-            <span className="text-xs font-mono text-zinc-400">Nov 28 Qualifier</span>
           </div>
-          <h2 className="text-base font-bold text-zinc-100">
-            Flash Coding Series 2026 : 512-Contender Single-Elimination Knockout
-          </h2>
-          <p className="text-xs text-zinc-400 max-w-2xl">
-            Pass the Day 1 Qualifying Quiz to secure seed in the 512 knockout tree. Compete for Day-1 Avengers: Doomsday IMAX Premiere Tickets and annual placement packages.
-          </p>
+
+          <div>
+            <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+              <Swords className="w-4 h-4 text-amber-400" />
+              <span>Ranked 1v1 Arena Clash</span>
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1">
+              Paired strictly within your Elo bracket (+/- 100). Sudden-death code duel: First to pass 100% test cases claims rating victory.
+            </p>
+          </div>
+
+          <div className="pt-2 flex items-center gap-2">
+            {isMatchmaking && matchmakingQueueType === 'RANKED' ? (
+              <div className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900 border border-amber-500/50">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                  <span className="text-xs font-mono text-zinc-200">
+                    Searching pool... {String(Math.floor(searchTimer / 60)).padStart(2, '0')}:{String(searchTimer % 60).padStart(2, '0')}
+                  </span>
+                </div>
+                <button
+                  onClick={cancelMatchmaking}
+                  className="text-xs font-mono text-zinc-400 hover:text-rose-400 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => startMatchmaking('RANKED')}
+                className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md shadow-amber-950/50"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>Find Ranked Match</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Link
-            to="/series"
-            className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700/80 transition-colors flex items-center gap-1"
-          >
-            <span>Tournament Hub</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-          <Link
-            to="/series/quiz"
-            className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
-          >
-            Take Qualifier
-          </Link>
+        {/* Casual Sparring & AI Training Card */}
+        <div className="p-5 rounded-xl bg-gradient-to-br from-zinc-900/90 to-zinc-950 border border-zinc-800 hover:border-zinc-700 transition-all space-y-3 relative overflow-hidden group">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">
+                Casual / Sparring
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-blue-950/60 text-blue-300 border border-blue-800/60">
+              Zero Rating Risk
+            </span>
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+              <Bot className="w-4 h-4 text-blue-400" />
+              <span>Friendly Clash or AI Rival</span>
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1">
+              Practice algorithmic problems stress-free with friends or instant zero-wait sparring against AI Neural Rival bots.
+            </p>
+          </div>
+
+          <div className="pt-2 flex items-center gap-2">
+            <button
+              onClick={() => startMatchmaking('CASUAL')}
+              className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-xs transition-colors border border-zinc-700 cursor-pointer"
+            >
+              Casual Queue
+            </button>
+            <button
+              onClick={spawnAiRival}
+              className="flex-1 py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>Spar vs AI Rival</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* AI Rival Fallback Notice Bar (Visible during long queue) */}
+      {isMatchmaking && searchTimer >= 30 && (
+        <div className="p-3.5 rounded-lg bg-zinc-900/90 border border-amber-500/40 flex items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-2 text-xs text-zinc-300">
+            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              Queue timeout threshold approaching. Would you like to enter instant practice against an AI Rival?
+            </span>
+          </div>
+          <button
+            onClick={spawnAiRival}
+            className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shrink-0 cursor-pointer"
+          >
+            Spawn AI Rival
+          </button>
+        </div>
+      )}
+
+      {/* Dynamic Flagship Tournament Hero Banner */}
+      {featuredContest ? (
+        <div className="p-5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+          <div className="space-y-1.5 z-10">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="text-xs font-mono font-semibold text-amber-400 uppercase tracking-wider">
+                {featuredContest.organizerType === 'FLASH_OFFICIAL'
+                  ? 'Flagship National Series'
+                  : featuredContest.organizerType === 'COLLEGE_PARTNERED'
+                  ? 'Campus Partnered Championship'
+                  : 'Official Tournament'}
+              </span>
+              <span className="text-zinc-600">·</span>
+              <span className="text-xs font-mono text-zinc-400">
+                {featuredContest.scheduledStartTime
+                  ? new Date(featuredContest.scheduledStartTime).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                  : 'Season 2026'}
+              </span>
+              {featuredContest.eloImpactEligible && (
+                <span className="px-1.5 py-0.2 rounded bg-amber-950/80 text-[10px] font-mono text-amber-300 border border-amber-800/60 uppercase">
+                  Ranked Rated
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-base font-bold text-zinc-100">
+              {featuredContest.title}
+            </h2>
+
+            <p className="text-xs text-zinc-400 max-w-2xl">
+              {featuredContest.description}
+            </p>
+
+            {featuredContest.prizes && featuredContest.prizes.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-mono text-zinc-400">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>Rewards: {featuredContest.prizes[0].reward}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 z-10">
+            <Link
+              to={featuredContest.slug === 'flash-coding-series-2026' ? '/series' : `/contest/${featuredContest.slug}`}
+              className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700/80 transition-colors flex items-center gap-1"
+            >
+              <span>Tournament Hub</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              to={featuredContest.slug === 'flash-coding-series-2026' ? '/series/quiz' : `/contest/${featuredContest.slug}`}
+              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
+            >
+              Enter Stage
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="p-5 rounded-xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-200">Competitive Arena Seasonal League</h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Explore open campus championships or start your own custom contest stage.</p>
+          </div>
+          <Link
+            to="/contest/studio"
+            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition-colors"
+          >
+            Launch Contest
+          </Link>
+        </div>
+      )}
 
       {/* Live Open Duels Section (Linear Dense Table) */}
       <div className="space-y-3">
@@ -166,27 +431,45 @@ export function ArenaLobbyPage() {
             </span>
           </div>
 
-          {/* Mode Filter Tabs */}
-          <div className="flex items-center gap-1">
-            {[
-              { id: 'ALL', label: 'All Modes' },
-              { id: 'SPEED_DSA', label: 'Speed DSA' },
-              { id: 'CODE_GOLF', label: 'Code Golf' },
-              { id: 'BUG_HUNTER', label: 'Bug Hunter' },
-              { id: 'TIME_ATTACK', label: 'Time Attack' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'bg-zinc-800 text-zinc-100 font-semibold'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Mode & Stakes Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex items-center gap-1 bg-zinc-900/80 p-0.5 rounded-lg border border-zinc-800">
+              {['ALL', 'RANKED', 'CASUAL'].map((stake) => (
+                <button
+                  key={stake}
+                  onClick={() => setQueueFilter(stake)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                    queueFilter === stake
+                      ? 'bg-zinc-800 text-zinc-100 font-bold'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {stake === 'ALL' ? 'All Stakes' : stake}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1">
+              {[
+                { id: 'ALL', label: 'All Modes' },
+                { id: 'SPEED_DSA', label: 'Speed DSA' },
+                { id: 'CODE_GOLF', label: 'Code Golf' },
+                { id: 'BUG_HUNTER', label: 'Bug Hunter' },
+                { id: 'TIME_ATTACK', label: 'Time Attack' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                    activeTab === tab.id
+                      ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -209,6 +492,7 @@ export function ArenaLobbyPage() {
                   <tr className="border-b border-zinc-800 bg-zinc-900/60 text-zinc-400 font-mono text-[11px]">
                     <th className="py-2.5 px-4 font-medium">Room</th>
                     <th className="py-2.5 px-4 font-medium">Problem / Focus</th>
+                    <th className="py-2.5 px-4 font-medium">Stakes</th>
                     <th className="py-2.5 px-4 font-medium">Mode</th>
                     <th className="py-2.5 px-4 font-medium">Tier</th>
                     <th className="py-2.5 px-4 font-medium">Host</th>
@@ -224,6 +508,17 @@ export function ArenaLobbyPage() {
                       <td className="py-3 px-4 font-medium text-zinc-200">
                         <div className="line-clamp-1">{b.problemTitle || 'Random Challenge'}</div>
                         <span className="text-[11px] text-zinc-500 font-mono">{b.category || 'DSA'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                            b.queueType === 'RANKED'
+                              ? 'bg-amber-950/60 text-amber-300 border border-amber-800/60'
+                              : 'bg-zinc-900 text-zinc-400 border border-zinc-800'
+                          }`}
+                        >
+                          {b.queueType || 'RANKED'}
+                        </span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-900 text-zinc-300 border border-zinc-800">
@@ -260,7 +555,7 @@ export function ArenaLobbyPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-zinc-200">Campus Contests</h3>
-            <span className="text-xs text-zinc-500 font-mono">Student Created</span>
+            <span className="text-xs text-zinc-500 font-mono">Student & College Hosted</span>
           </div>
           <Link
             to="/contest/studio"

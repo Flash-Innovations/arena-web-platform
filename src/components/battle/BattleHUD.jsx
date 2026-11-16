@@ -93,6 +93,15 @@ export function BattleHUD({
 
           <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500 tracking-tight mt-0.5">
             <span>{match?.roomCode || 'FLASH-DUEL'} · {match?.gameMode?.replace('_', ' ')}</span>
+            <span
+              className={`px-1.5 py-0.2 rounded font-bold uppercase ${
+                match?.queueType === 'RANKED'
+                  ? 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
+                  : 'bg-blue-950/80 text-blue-300 border border-blue-800/60'
+              }`}
+            >
+              {match?.isAiRival ? 'AI Rival' : match?.queueType || 'RANKED'}
+            </span>
             {opponentStatus === 'DISCONNECTED' && (
               <span className="text-rose-400 flex items-center gap-1 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20 animate-pulse">
                 <WifiOff className="w-2.5 h-2.5" />

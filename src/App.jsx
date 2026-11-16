@@ -8,6 +8,7 @@ import { BattleRoomPage } from './pages/BattleRoomPage';
 import { ContestStudioPage } from './pages/ContestStudioPage';
 import { ContestViewPage } from './pages/ContestViewPage';
 import { ContestHostDeckPage } from './pages/ContestHostDeckPage';
+import { ContestProjectorPage } from './pages/ContestProjectorPage';
 import { TournamentHubPage } from './pages/TournamentHubPage';
 import { TournamentQuizPage } from './pages/TournamentQuizPage';
 import { TournamentBracketPage } from './pages/TournamentBracketPage';
@@ -69,6 +70,9 @@ export function App() {
             </>
           }
         />
+
+        {/* Auditorium Projector Spectator View */}
+        <Route path="/contest/:slug/projector" element={<ContestProjectorPage />} />
 
         {/* Flagship Flash Coding Series 2026 */}
         <Route

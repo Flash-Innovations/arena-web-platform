@@ -230,6 +230,62 @@ export function BattleRoomPage() {
     return () => clearInterval(timer);
   }, [disconnectGraceSeconds]);
 
+  // 7. Anti-Cheat: Tab Blur & Visibility Tracking
+  useEffect(() => {
+    if (!isCompetitor || match?.status !== 'IN_PROGRESS') return;
+
+    const handleBlur = () => {
+      setTabBlurViolations((prev) => prev + 1);
+      arenaApi.reportAntiCheat(roomCode, {
+        eventType: 'TAB_BLUR',
+        details: { timestamp: Date.now() }
+      }).catch(() => {});
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        arenaApi.reportAntiCheat(roomCode, {
+          eventType: 'WINDOW_FOCUS_LOST',
+          details: { timestamp: Date.now() }
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [roomCode, isCompetitor, match?.status]);
+
+  // 8. AI Rival Sparring Progress Simulation
+  useEffect(() => {
+    if (!match?.isAiRival || match?.status !== 'IN_PROGRESS') return;
+
+    const totalTests = problem?.testCases?.length || 5;
+    let aiPassed = 0;
+
+    const aiInterval = setInterval(() => {
+      aiPassed = Math.min(totalTests, aiPassed + 1);
+      setOpponentProgress({
+        testCasesPassed: aiPassed,
+        totalTestCases: totalTests,
+        codeLength: 120 + aiPassed * 45
+      });
+
+      if (aiPassed >= totalTests && match.status === 'IN_PROGRESS') {
+        clearInterval(aiInterval);
+        setIsWinner(false);
+        setWinReason('FIRST_AC');
+        setIsVictoryModalOpen(true);
+      }
+    }, 18000 + Math.random() * 8000);
+
+    return () => clearInterval(aiInterval);
+  }, [match?.isAiRival, match?.status, problem?.testCases?.length]);
+
   const handleCheckIn = async () => {
     try {
       const res = await arenaApi.checkIn(roomCode);

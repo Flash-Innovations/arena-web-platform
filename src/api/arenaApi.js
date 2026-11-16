@@ -63,14 +63,29 @@ export const arenaApi = {
   createFriendlyRoom: (payload) =>
     arenaRequest('/api/arena/battle/create', { method: 'POST', body: JSON.stringify(payload) }),
 
-  getOpenBattles: () =>
-    arenaRequest('/api/arena/battle/open', { method: 'GET' }),
+  matchmake: (payload) =>
+    arenaRequest('/api/arena/battle/matchmake', { method: 'POST', body: JSON.stringify(payload) }),
+
+  createAiRivalMatch: (payload) =>
+    arenaRequest('/api/arena/battle/ai-rival', { method: 'POST', body: JSON.stringify(payload) }),
+
+  getOpenBattles: (queueType) =>
+    arenaRequest(`/api/arena/battle/open${queueType ? `?queueType=${queueType}` : ''}`, { method: 'GET' }),
 
   getProblemCatalog: () =>
     arenaRequest('/api/arena/battle/problems', { method: 'GET' }),
 
   getMatch: (roomCode) =>
     arenaRequest(`/api/arena/battle/${roomCode}`, { method: 'GET' }),
+
+  getMatchReview: (roomCode) =>
+    arenaRequest(`/api/arena/battle/${roomCode}/review`, { method: 'GET' }),
+
+  reportAntiCheat: (roomCode, payload) =>
+    arenaRequest(`/api/arena/battle/${roomCode}/telemetry`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
 
   checkIn: (roomCode) =>
     arenaRequest(`/api/arena/battle/${roomCode}/checkin`, { method: 'POST' }),
@@ -110,6 +125,9 @@ export const arenaApi = {
     arenaRequest('/api/arena/tournament/quiz/submit', { method: 'POST', body: JSON.stringify(payload) }),
 
   // Student Contest Studio
+  getFeaturedContest: () =>
+    arenaRequest('/api/arena/contest/featured', { method: 'GET' }),
+
   createContest: (payload) =>
     arenaRequest('/api/arena/contest/create', { method: 'POST', body: JSON.stringify(payload) }),
 
@@ -118,6 +136,29 @@ export const arenaApi = {
 
   getContestBySlug: (slug) =>
     arenaRequest(`/api/arena/contest/${slug}`, { method: 'GET' }),
+
+  getProjectorData: (slug) =>
+    arenaRequest(`/api/arena/contest/${slug}/projector`, { method: 'GET' }),
+
+  searchQuestions: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return arenaRequest(`/api/arena/contest/questions/search${query ? `?${query}` : ''}`, { method: 'GET' });
+  },
+
+  getStageQuestions: (slug, stageId) =>
+    arenaRequest(`/api/arena/contest/${slug}/stages/${stageId}/questions`, { method: 'GET' }),
+
+  updateStageQuestions: (slug, stageId, payload) =>
+    arenaRequest(`/api/arena/contest/${slug}/stages/${stageId}/questions`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }),
+
+  shuffleStageQuestions: (slug, stageId, payload = {}) =>
+    arenaRequest(`/api/arena/contest/${slug}/stages/${stageId}/shuffle`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
 
   registerContest: (slug, passcode = '') =>
     arenaRequest(`/api/arena/contest/${slug}/register`, {
