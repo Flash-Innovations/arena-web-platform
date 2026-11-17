@@ -12,6 +12,7 @@ import { ContestProjectorPage } from './pages/ContestProjectorPage';
 import { TournamentHubPage } from './pages/TournamentHubPage';
 import { TournamentQuizPage } from './pages/TournamentQuizPage';
 import { TournamentBracketPage } from './pages/TournamentBracketPage';
+import { GladiatorProfilePage } from './pages/GladiatorProfilePage';
 
 export function App() {
   return (
@@ -110,6 +111,20 @@ export function App() {
             </>
           }
         />
+
+        {/* Gladiator Esports Profile & Recruiter Passport */}
+        <Route
+          path="/u/:username"
+          element={
+            <>
+              <ArenaNavbar />
+              <main className="flex-1">
+                <GladiatorProfilePage />
+              </main>
+            </>
+          }
+        />
+        <Route path="/profile" element={<Navigate to="/u/me" replace />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

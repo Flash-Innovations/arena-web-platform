@@ -88,7 +88,11 @@ export function ArenaNavbar() {
               <GladiatorBadge elo={user?.rating || 1200} size="xs" />
 
               {/* User Pill */}
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-200">
+              <Link
+                to={`/u/${user?.username || user?.id || 'me'}`}
+                title="View Gladiator Profile & Placement Passport"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-xs font-medium text-zinc-200 transition-colors"
+              >
                 <div className="w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-300 overflow-hidden">
                   {user?.avatar || user?.profileImageUrl ? (
                     <img src={user.avatar || user.profileImageUrl} alt="" className="w-full h-full object-cover" />
@@ -97,7 +101,7 @@ export function ArenaNavbar() {
                   )}
                 </div>
                 <span className="max-w-[100px] truncate hidden sm:inline">{user?.name || 'Gladiator'}</span>
-              </div>
+              </Link>
 
               {/* Logout Button */}
               <button

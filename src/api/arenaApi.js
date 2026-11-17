@@ -231,7 +231,11 @@ export const arenaApi = {
     }),
 
   getContestLeaderboard: (slug) =>
-    arenaRequest(`/api/arena/contest/${slug}/leaderboard`, { method: 'GET' })
+    arenaRequest(`/api/arena/contest/${slug}/leaderboard`, { method: 'GET' }),
+
+  // Gladiator Esports Profile & Recruiter Passport
+  getGladiatorProfile: (identifier) =>
+    arenaRequest(`/api/arena/profile/${encodeURIComponent(identifier)}`, { method: 'GET' })
 };
 
 export default arenaApi;
