@@ -1,5 +1,6 @@
-import React from 'react';
-import { Timer, Radio, Flag, Wifi, WifiOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { Timer, Radio, Flag, Wifi, WifiOff, Volume2, VolumeX, Mic, MicOff } from 'lucide-react';
+import arenaSound from '../../services/arenaSoundService';
 
 export function BattleHUD({
   match,
@@ -10,6 +11,20 @@ export function BattleHUD({
   onForfeit,
   isCompetitor = false
 }) {
+  const [isAudioOn, setIsAudioOn] = useState(() => arenaSound.isMasterEnabled());
+  const [isVoiceOn, setIsVoiceOn] = useState(() => arenaSound.isVoiceEnabled());
+
+  const toggleAudio = () => {
+    const next = !isAudioOn;
+    setIsAudioOn(next);
+    arenaSound.setMasterEnabled(next);
+  };
+
+  const toggleVoice = () => {
+    const next = !isVoiceOn;
+    setIsVoiceOn(next);
+    arenaSound.setVoiceEnabled(next);
+  };
   const p1 = match?.player1 || {};
   const p2 = match?.player2 || {};
 
@@ -77,6 +92,30 @@ export function BattleHUD({
               <span className={isCriticalTime ? 'text-amber-400 font-mono font-black' : 'text-zinc-100'}>
                 {formatTime(timeRemainingSeconds)}
               </span>
+            </div>
+
+            {/* Audio & Voice Announcer Toggles */}
+            <div className="flex items-center gap-1 bg-zinc-900/90 border border-zinc-800 rounded px-1 py-0.5">
+              <button
+                type="button"
+                onClick={toggleAudio}
+                title={isAudioOn ? 'Mute Game Audio' : 'Unmute Game Audio'}
+                className={`p-1 rounded transition-colors cursor-pointer ${
+                  isAudioOn ? 'text-zinc-300 hover:text-white' : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >
+                {isAudioOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5 text-zinc-500" />}
+              </button>
+              <button
+                type="button"
+                onClick={toggleVoice}
+                title={isVoiceOn ? 'Disable Voice Announcer' : 'Enable Voice Announcer'}
+                className={`p-1 rounded transition-colors cursor-pointer ${
+                  isVoiceOn ? 'text-blue-400 hover:text-blue-300' : 'text-zinc-600 hover:text-zinc-400'
+                }`}
+              >
+                {isVoiceOn ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5 text-zinc-500" />}
+              </button>
             </div>
 
             {isCompetitor && match?.status === 'IN_PROGRESS' && onForfeit && (
