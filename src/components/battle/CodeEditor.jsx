@@ -69,6 +69,7 @@ export function CodeEditor({
             <option value="python">Python 3</option>
             <option value="javascript">JavaScript</option>
             <option value="cpp">C++ (GCC)</option>
+            <option value="java">Java (OpenJDK)</option>
           </select>
         </div>
 
