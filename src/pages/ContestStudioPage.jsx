@@ -766,7 +766,7 @@ export function ContestStudioPage() {
                           </label>
                           <select
                             value={stg.bracketSize}
-                            onChange={(e) => updateStageField(index, 'bracketSize', e.target.value)}
+                            onChange={(e) => updateStageField(index, 'bracketSize', Number(e.target.value))}
                             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"
                           >
                             {[2, 4, 8, 16, 32, 64].map((k) => (
