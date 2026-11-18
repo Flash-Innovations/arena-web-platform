@@ -473,12 +473,15 @@ export function BattleRoomPage() {
     };
 
     const handleKeyDown = (e) => {
-      // Suppress DevTools shortcuts
-      if (
+      // Suppress DevTools and source inspection shortcuts (Windows + macOS)
+      const keyUpper = (e.key || '').toUpperCase();
+      const isDevToolsKey =
         e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
-        (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
-      ) {
+        (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(keyUpper)) ||
+        (e.metaKey && e.altKey && ['I', 'J', 'C'].includes(keyUpper)) ||
+        ((e.ctrlKey || e.metaKey) && ['U', 'S'].includes(keyUpper));
+
+      if (isDevToolsKey) {
         e.preventDefault();
         recordStrike('DEVTOOLS_OPENED', 'DevTools key shortcut intercepted');
       }

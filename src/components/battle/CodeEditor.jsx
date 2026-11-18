@@ -38,10 +38,15 @@ export function CodeEditor({
       setTimeout(() => setPasteBlockedWarning(false), 3000);
     });
 
-    // Disable editor context menu paste
+    // Disable editor context menu paste and drag-and-drop insertion
     const domNode = editor.getDomNode();
     if (domNode) {
       domNode.addEventListener('paste', (e) => {
+        e.preventDefault();
+        setPasteBlockedWarning(true);
+        setTimeout(() => setPasteBlockedWarning(false), 3000);
+      });
+      domNode.addEventListener('drop', (e) => {
         e.preventDefault();
         setPasteBlockedWarning(true);
         setTimeout(() => setPasteBlockedWarning(false), 3000);
@@ -127,6 +132,8 @@ export function CodeEditor({
             automaticLayout: true,
             tabSize: 4,
             padding: { top: 12 },
+            dragAndDrop: false,
+            dropIntoEditor: { enabled: false },
             fontFamily: "ui-monospace, SFMono-Regular, 'JetBrains Mono', 'Geist Mono', Menlo, Consolas, monospace"
           }}
         />
