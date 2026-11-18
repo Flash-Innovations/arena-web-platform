@@ -241,7 +241,13 @@ export const arenaApi = {
 
   // Gladiator Esports Profile & Recruiter Passport
   getGladiatorProfile: (identifier) =>
-    arenaRequest(`/api/arena/profile/${encodeURIComponent(identifier)}`, { method: 'GET' })
+    arenaRequest(`/api/arena/profile/${encodeURIComponent(identifier)}`, { method: 'GET' }),
+
+  updateProfileUsername: (username) =>
+    arenaRequest('/api/arena/profile/username', {
+      method: 'PATCH',
+      body: JSON.stringify({ username })
+    })
 };
 
 export default arenaApi;

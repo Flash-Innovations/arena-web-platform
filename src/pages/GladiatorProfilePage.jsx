@@ -22,7 +22,8 @@ import {
   ArrowUpRight,
   Lock,
   Activity,
-  FileText
+  FileText,
+  Edit3
 } from 'lucide-react';
 import arenaApi from '../api/arenaApi';
 import { useAuth } from '../context/AuthContext';
@@ -42,6 +43,10 @@ export function GladiatorProfilePage() {
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [copiedBadge, setCopiedBadge] = useState(false);
   const [passportModalOpen, setPassportModalOpen] = useState(false);
+  const [handleModalOpen, setHandleModalOpen] = useState(false);
+  const [newHandle, setNewHandle] = useState('');
+  const [handleSaving, setHandleSaving] = useState(false);
+  const [handleError, setHandleError] = useState(null);
   const [eloFilter, setEloFilter] = useState('ALL'); // '30D' | '90D' | 'ALL'
 
   // Determine query target
@@ -94,11 +99,46 @@ export function GladiatorProfilePage() {
   const trophies = profileData?.trophies || [];
   const recentDuels = profileData?.recentDuels || [];
 
+  const isOwner = Boolean(
+    profileData?.isOwner ||
+    (currentUser && (currentUser.id === profile?.id || currentUser._id === profile?.id || currentUser.username === profile?.username))
+  );
+
   const handleCopyLink = () => {
-    const url = window.location.href;
+    const url = profile?.shareUrl || `https://flashedu.in/u/${profile?.username || ''}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleSaveUsername = async () => {
+    if (!newHandle || newHandle.length < 3) {
+      setHandleError('Handle must be at least 3 characters long.');
+      return;
+    }
+    try {
+      setHandleSaving(true);
+      setHandleError(null);
+      const res = await arenaApi.updateProfileUsername(newHandle);
+      if (res && res.success) {
+        setProfileData((prev) => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            username: res.username,
+            shareUrl: res.shareUrl || `https://flashedu.in/u/${res.username}`,
+            embedBadgeUrl: (prev.profile.embedBadgeUrl || '').replace(/\/[^/]+\/badge\.svg$/, `/${res.username}/badge.svg`)
+          }
+        }));
+        setHandleModalOpen(false);
+      } else {
+        setHandleError(res?.message || 'Failed to update handle.');
+      }
+    } catch (err) {
+      setHandleError(err.message || 'Failed to update handle.');
+    } finally {
+      setHandleSaving(false);
+    }
   };
 
   const handleCopyBadgeMarkdown = () => {
@@ -226,6 +266,21 @@ export function GladiatorProfilePage() {
                   {profile.name}
                 </h1>
                 <span className="text-xs font-mono text-zinc-400">@{profile.username}</span>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewHandle(profile.username || '');
+                      setHandleError(null);
+                      setHandleModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-850 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-750 transition-colors cursor-pointer"
+                    title="Change public handle"
+                  >
+                    <Edit3 className="w-2.5 h-2.5 text-blue-400" />
+                    <span>Edit Handle</span>
+                  </button>
+                )}
                 {profile.isEmailVerified && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold">
                     <ShieldCheck className="w-3 h-3" />
@@ -277,23 +332,27 @@ export function GladiatorProfilePage() {
                 <span>{copiedLink ? 'Copied Link' : 'Share'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setBadgeModalOpen(true)}
-                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Code2 className="w-3.5 h-3.5 text-blue-400" />
-                <span>Embed Badge</span>
-              </button>
+              {isOwner && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setBadgeModalOpen(true)}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-850 text-xs font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Code2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Embed Badge</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setPassportModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Recruiter Passport</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setPassportModalOpen(true)}
+                    className="px-3.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Recruiter Passport</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -613,7 +672,7 @@ export function GladiatorProfilePage() {
       </section>
 
       {/* MODAL 1: Embed GitHub Badge Modal */}
-      {badgeModalOpen && (
+      {isOwner && badgeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-zinc-950 border border-zinc-800 p-6 space-y-4 shadow-2xl text-zinc-100">
             <div className="flex items-start justify-between">
@@ -667,7 +726,7 @@ export function GladiatorProfilePage() {
       )}
 
       {/* MODAL 2: Recruiter Placement Passport Printable View */}
-      {passportModalOpen && (
+      {isOwner && passportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
           <div className="relative w-full max-w-2xl rounded-2xl bg-zinc-950 border border-zinc-800 p-8 shadow-2xl text-zinc-100 space-y-6 my-8">
             {/* Top Toolbar */}
@@ -754,8 +813,79 @@ export function GladiatorProfilePage() {
               {/* Verification Seal */}
               <div className="pt-2 border-t border-zinc-850 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
                 <span>Cryptographically Verified via Judge0 Real-Time Sandbox</span>
-                <span>arena.flashedu.in/u/{profile.username}</span>
+                <span>{profile.shareUrl || `https://flashedu.in/u/${profile.username}`}</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Claim / Edit Public Handle */}
+      {isOwner && handleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md rounded-2xl bg-zinc-950 border border-zinc-800 p-6 shadow-2xl space-y-5 text-zinc-100">
+            <div className="flex items-center justify-between border-b border-zinc-850 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-100">Claim Public Handle</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Customize your universal profile link across Flash.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHandleModalOpen(false)}
+                className="p-1 rounded text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-mono uppercase text-zinc-400 block mb-1.5">
+                  Public Handle
+                </label>
+                <div className="flex items-center rounded-lg bg-zinc-900 border border-zinc-800 focus-within:border-blue-500 px-3 py-2 text-xs">
+                  <span className="font-mono text-zinc-500 select-none">flashedu.in/u/</span>
+                  <input
+                    type="text"
+                    value={newHandle}
+                    onChange={(e) => {
+                      setNewHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''));
+                      setHandleError(null);
+                    }}
+                    placeholder="yourhandle"
+                    maxLength={24}
+                    className="flex-1 bg-transparent text-white font-mono focus:outline-none pl-0.5"
+                  />
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  3-24 characters. Lowercase letters, numbers, hyphens, and underscores only.
+                </p>
+              </div>
+
+              {handleError && (
+                <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                  {handleError}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setHandleModalOpen(false)}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                disabled={handleSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveUsername}
+                disabled={handleSaving || !newHandle || newHandle.length < 3}
+                className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                {handleSaving ? 'Saving...' : 'Save Handle'}
+              </button>
             </div>
           </div>
         </div>
