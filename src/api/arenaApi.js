@@ -177,6 +177,12 @@ export const arenaApi = {
   createContest: (payload) =>
     arenaRequest('/api/arena/contest/create', { method: 'POST', body: JSON.stringify(payload) }),
 
+  updateContest: (slug, payload) =>
+    arenaRequest(`/api/arena/contest/${slug}`, { method: 'PUT', body: JSON.stringify(payload) }),
+
+  extendContestStageTime: (slug, minutes = 5) =>
+    arenaRequest(`/api/arena/contest/${slug}/extend-time`, { method: 'POST', body: JSON.stringify({ minutes }) }),
+
   getPublicContests: () =>
     arenaRequest('/api/arena/contest/public', { method: 'GET' }),
 

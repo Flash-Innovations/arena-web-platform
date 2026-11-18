@@ -151,13 +151,24 @@ export function ContestViewPage() {
           {/* Action Row */}
           <div className="flex flex-wrap items-center gap-2.5 pt-2">
             {contest.isCreator && (
-              <Link
-                to={`/contest/${contest.slug}/host`}
-                className="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium border border-zinc-700 transition-colors flex items-center gap-1.5"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>Host Control Deck</span>
-              </Link>
+              <>
+                <Link
+                  to={`/contest/${contest.slug}/host`}
+                  className="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium border border-zinc-700 transition-colors flex items-center gap-1.5"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Host Control Deck</span>
+                </Link>
+
+                {contest.status !== 'COMPLETED' && (
+                  <Link
+                    to={`/contest/${contest.slug}/edit`}
+                    className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-amber-300 text-xs font-medium border border-amber-500/30 transition-colors flex items-center gap-1.5"
+                  >
+                    <span>Edit Details</span>
+                  </Link>
+                )}
+              </>
             )}
 
             {contest.isRegistered ? (

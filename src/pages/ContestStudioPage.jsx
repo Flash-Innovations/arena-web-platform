@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Layers,
   Plus,
@@ -177,6 +177,8 @@ const PRESETS = [
 
 export function ContestStudioPage() {
   const navigate = useNavigate();
+  const { slug } = useParams();
+  const isEditMode = Boolean(slug);
   const { isAuthenticated, openAuthModal } = useAuth();
 
   // Contest Metadata
@@ -232,6 +234,39 @@ export function ContestStudioPage() {
   const [error, setError] = useState(null);
   const [publishedContest, setPublishedContest] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // Pre-populate when in edit mode
+  useEffect(() => {
+    if (!slug) return;
+    setLoading(true);
+    arenaApi.getContestBySlug(slug)
+      .then((res) => {
+        if (res && res.success && res.contest) {
+          const c = res.contest;
+          setTitle(c.title || '');
+          setDescription(c.description || '');
+          setOrganizerType(c.organizerType || 'COMMUNITY');
+          setIsFeaturedHero(Boolean(c.isFeaturedHero));
+          setIsPublic(Boolean(c.isPublic));
+          setPasscode(c.passcode || '');
+          if (c.maxParticipants === 0) {
+            setIsUnlimitedStudents(true);
+          } else {
+            setIsUnlimitedStudents(false);
+            setMaxParticipants(c.maxParticipants);
+          }
+          if (Array.isArray(c.stages) && c.stages.length > 0) {
+            setStages(c.stages);
+          }
+        }
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load contest details for editing.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [slug]);
 
   // Apply Quick Preset
   const handleApplyPreset = (preset) => {
@@ -332,9 +367,17 @@ export function ContestStudioPage() {
         stages
       };
 
-      const res = await arenaApi.createContest(payload);
-      if (res.success) {
-        setPublishedContest(res);
+      if (isEditMode) {
+        const res = await arenaApi.updateContest(slug, payload);
+        if (res && res.success) {
+          navigate(`/contest/${slug}/host`);
+          return;
+        }
+      } else {
+        const res = await arenaApi.createContest(payload);
+        if (res.success) {
+          setPublishedContest(res);
+        }
       }
     } catch (err) {
       const msg = err.message || '';
@@ -680,11 +723,11 @@ export function ContestStudioPage() {
                 {loading ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
-                    <span>Publishing...</span>
+                    <span>{isEditMode ? 'Saving Updates...' : 'Publishing...'}</span>
                   </>
                 ) : (
                   <>
-                    <span>Publish Contest</span>
+                    <span>{isEditMode ? 'Save Contest Updates' : 'Publish Contest'}</span>
                   </>
                 )}
               </button>

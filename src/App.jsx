@@ -72,6 +72,18 @@ export function App() {
           }
         />
 
+        <Route
+          path="/contest/:slug/edit"
+          element={
+            <>
+              <ArenaNavbar />
+              <main className="flex-1">
+                <ContestStudioPage />
+              </main>
+            </>
+          }
+        />
+
         {/* Auditorium Projector Spectator View */}
         <Route path="/contest/:slug/projector" element={<ContestProjectorPage />} />
 
