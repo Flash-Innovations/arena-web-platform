@@ -70,6 +70,8 @@ export function BattleRoomPage() {
   const [chamberCountdown, setChamberCountdown] = useState(null);
   const [malpracticeStrikes, setMalpracticeStrikes] = useState(0);
   const [strikeWarning, setStrikeWarning] = useState(null);
+  const lastStrikeTimestampRef = useRef(0);
+  const hasEnteredFullscreenRef = useRef(false);
 
   // Responsive mobile screen detector
   useEffect(() => {
@@ -311,9 +313,13 @@ export function BattleRoomPage() {
             arenaSound.announce('Duel!');
             setChamberCountdown(null);
 
-            // Auto-enter compulsory fullscreen for competitors
-            if (isCompetitor && document.documentElement.requestFullscreen) {
-              document.documentElement.requestFullscreen().catch(() => {});
+            // Auto-enter compulsory fullscreen for competitors if not already active
+            if (isCompetitor && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen()
+                .then(() => {
+                  hasEnteredFullscreenRef.current = true;
+                })
+                .catch(() => {});
             }
             return null;
           }
@@ -393,7 +399,16 @@ export function BattleRoomPage() {
   useEffect(() => {
     if (!isCompetitor || match?.status !== 'IN_PROGRESS') return;
 
+    const isRanked = (match?.queueType === 'RANKED' || match?.queueType === 'CONTEST_STAGE') && !match?.isAiRival;
+
     const recordStrike = (eventType, reason) => {
+      const now = Date.now();
+      // Cooldown of 4 seconds prevents cascaded duplicate events (blur + visibility + fullscreen) from a single alt-tab
+      if (now - lastStrikeTimestampRef.current < 4000) {
+        return;
+      }
+      lastStrikeTimestampRef.current = now;
+
       arenaSound.playWarning();
       setMalpracticeStrikes((prev) => {
         const next = prev + 1;
@@ -413,14 +428,14 @@ export function BattleRoomPage() {
           });
         } else if (next >= 3) {
           arenaSound.playDefeat();
-          arenaSound.announce('Disqualified for malpractice');
+          arenaSound.announce(isRanked ? 'Disqualified for malpractice' : 'Multiple focus warnings detected');
         }
 
         arenaApi.reportAntiCheat(roomCode, {
           eventType,
           details: { strikeNumber: next, reason, timestamp: Date.now() }
         }).then((res) => {
-          if (res && res.disqualified) {
+          if (res && res.disqualified && isRanked) {
             setIsWinner(false);
             setWinReason('MALPRACTICE_DISQUALIFIED');
             setIsVictoryModalOpen(true);
@@ -434,18 +449,21 @@ export function BattleRoomPage() {
       });
     };
 
-    const handleBlur = () => {
-      recordStrike('TAB_BLUR', 'Window focus lost');
-    };
-
     const handleVisibility = () => {
       if (document.hidden) {
-        recordStrike('WINDOW_FOCUS_LOST', 'Tab switched or minimized');
+        recordStrike('WINDOW_FOCUS_LOST', 'Tab switched or window minimized');
+      }
+    };
+
+    const handleBlur = () => {
+      // Only fire blur if document is not already hidden to prevent double-counting with visibilitychange
+      if (!document.hidden) {
+        recordStrike('TAB_BLUR', 'Window focus lost');
       }
     };
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && match?.status === 'IN_PROGRESS') {
+      if (hasEnteredFullscreenRef.current && !document.fullscreenElement && match?.status === 'IN_PROGRESS') {
         recordStrike('FULLSCREEN_EXIT', 'Manual exit from full screen');
       }
     };
@@ -521,6 +539,15 @@ export function BattleRoomPage() {
     }
 
     try {
+      // Enter browser fullscreen directly on explicit user click gesture
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen()
+          .then(() => {
+            hasEnteredFullscreenRef.current = true;
+          })
+          .catch(() => {});
+      }
+
       const res = await arenaApi.checkIn(roomCode);
       if (res.success) {
         setMatch((prev) => ({

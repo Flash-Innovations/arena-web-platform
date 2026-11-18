@@ -34,6 +34,7 @@ export function VictoryModal({
   if (!isOpen) return null;
 
   const isCasual = match?.queueType === 'CASUAL' || Boolean(match?.isAiRival);
+  const isDraw = !match?.winnerId || winReason === 'TIEBREAKER_SEED';
 
   const handleShareWhatsApp = () => {
     const text = `I just won a 1v1 Code Duel on Flash Arena (${match?.problemTitle || 'DSA Challenge'}). Challenge me: https://arena.flashedu.in`;
@@ -76,21 +77,34 @@ export function VictoryModal({
   };
 
   const getWinReasonDescription = () => {
+    if (isDraw) {
+      return 'Time expired: Neither competitor passed all required test cases before the final buzzer. Match ended in a draw.';
+    }
+    if (winReason === 'MALPRACTICE_DISQUALIFIED') {
+      return isWinner
+        ? 'Opponent was disqualified due to anti-cheat malpractice (exiting full screen or repeated tab focus violations).'
+        : 'You were disqualified for exceeding anti-cheat malpractice limits (tab switching or exiting full-screen).';
+    }
     if (winReason === 'FORFEIT') {
-      return isWinner ? 'Opponent conceded the match.' : 'You forfeited the match.';
+      return isWinner ? 'Opponent surrendered and conceded the duel.' : 'You surrendered and forfeited the match.';
     }
     if (winReason === 'WALKOVER') {
-      return isWinner ? 'Opponent disconnected and exceeded the 45-second reconnect window.' : 'Match abandoned.';
+      return isWinner ? 'Opponent disconnected and exceeded the 45-second reconnect window.' : 'You disconnected and exceeded the reconnect grace window.';
     }
     if (winReason === 'SHORTEST_CODE') {
-      return isWinner ? 'Victory by Code Golf (Shortest verified byte count).' : 'Opponent submitted a more concise solution.';
+      return isWinner ? 'Victory by Code Golf: You submitted a valid passing solution with fewer code bytes than opponent.' : 'Opponent submitted a more concise valid solution.';
     }
     if (winReason === 'MOST_TEST_CASES') {
-      return isWinner ? 'Victory by test case count at time limit.' : 'Opponent completed more test cases.';
+      return isWinner ? 'Victory by test case count: You passed more test cases than opponent before the timer expired.' : 'Time expired: Opponent completed more test cases at the final buzzer.';
+    }
+    if (winReason === 'FIRST_AC') {
+      return isWinner
+        ? 'First All-Correct Submission: You submitted and verified 100% of test cases before opponent!'
+        : 'Opponent submitted an all-correct solution first.';
     }
     return isWinner
-      ? 'All test cases passed and verified before opponent.'
-      : 'Opponent passed all test cases first.';
+      ? 'Victory confirmed in the Arena.'
+      : 'Match concluded. Better luck in the next duel.';
   };
 
   return (
@@ -100,13 +114,17 @@ export function VictoryModal({
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {isWinner ? (
+              {isDraw ? (
+                <CheckCircle2 className="w-4 h-4 text-amber-400" />
+              ) : isWinner ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               ) : (
                 <XCircle className="w-4 h-4 text-zinc-400" />
               )}
-              <span className={`text-xs font-mono font-semibold uppercase tracking-wider ${isWinner ? 'text-emerald-400' : 'text-zinc-400'}`}>
-                {isWinner ? 'Victory Confirmed' : 'Match Concluded'}
+              <span className={`text-xs font-mono font-semibold uppercase tracking-wider ${
+                isDraw ? 'text-amber-400' : isWinner ? 'text-emerald-400' : 'text-zinc-400'
+              }`}>
+                {isDraw ? 'Match Drawn' : isWinner ? 'Victory Confirmed' : 'Match Concluded'}
               </span>
             </div>
 
@@ -118,19 +136,21 @@ export function VictoryModal({
             ) : ratingChange !== undefined && ratingChange !== null ? (
               <div
                 className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-bold ${
-                  ratingChange >= 0
+                  ratingChange > 0
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    : ratingChange < 0
+                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    : 'bg-zinc-800 text-zinc-300 border border-zinc-750'
                 }`}
               >
-                {ratingChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <span>{ratingChange >= 0 ? `+${ratingChange}` : ratingChange} ELO</span>
+                {ratingChange > 0 ? <TrendingUp className="w-3 h-3" /> : ratingChange < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+                <span>{ratingChange > 0 ? `+${ratingChange}` : ratingChange} ELO</span>
               </div>
             ) : null}
           </div>
 
           <h2 className="text-lg font-bold text-zinc-100">
-            {isWinner ? 'Victory in the Arena' : 'Defeat in the Arena'}
+            {isDraw ? 'Match Drawn' : isWinner ? 'Victory in the Arena' : 'Defeat in the Arena'}
           </h2>
           <p className="text-xs text-zinc-400 leading-relaxed">
             {getWinReasonDescription()}
