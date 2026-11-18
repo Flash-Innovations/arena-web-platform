@@ -182,7 +182,8 @@ export function ContestStudioPage() {
   // Contest Metadata
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [organizerType, setOrganizerType] = useState('COMMUNITY'); // 'COMMUNITY' | 'COLLEGE_PARTNERED'
+  const [organizerType, setOrganizerType] = useState('COMMUNITY'); // 'COMMUNITY' | 'COLLEGE_PARTNERED' | 'FLASH_OFFICIAL'
+  const [isFeaturedHero, setIsFeaturedHero] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
   const [passcode, setPasscode] = useState('');
   const [isUnlimitedStudents, setIsUnlimitedStudents] = useState(true);
@@ -323,7 +324,8 @@ export function ContestStudioPage() {
         title: title.trim(),
         description: description.trim() || 'Custom Student Esports Contest',
         organizerType,
-        eloImpactEligible: organizerType === 'COLLEGE_PARTNERED',
+        isFeaturedHero: Boolean(isFeaturedHero),
+        eloImpactEligible: organizerType === 'COLLEGE_PARTNERED' || organizerType === 'FLASH_OFFICIAL',
         isPublic,
         passcode: passcode.trim(),
         maxParticipants: isUnlimitedStudents ? 0 : Number(maxParticipants),
@@ -491,14 +493,14 @@ export function ContestStudioPage() {
                   <label className="block text-[11px] font-mono uppercase text-zinc-400 mb-1.5">
                     Organizer Tier & Stakes
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setOrganizerType('COMMUNITY')}
                       className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
                         organizerType === 'COMMUNITY'
                           ? 'bg-zinc-800 border-zinc-600 text-zinc-100'
-                          : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                       }`}
                     >
                       <div className="text-xs font-bold">Community</div>
@@ -510,12 +512,37 @@ export function ContestStudioPage() {
                       className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
                         organizerType === 'COLLEGE_PARTNERED'
                           ? 'bg-amber-950/40 border-amber-500/70 text-amber-300'
-                          : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
                       }`}
                     >
                       <div className="text-xs font-bold">Campus Official</div>
                       <div className="text-[10px] text-zinc-500">Ranked ELO eligible</div>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setOrganizerType('FLASH_OFFICIAL')}
+                      className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                        organizerType === 'FLASH_OFFICIAL'
+                          ? 'bg-blue-950/40 border-blue-500/70 text-blue-300'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">Flash Official</div>
+                      <div className="text-[10px] text-zinc-500">Flagship National Series</div>
+                    </button>
+                  </div>
+
+                  {/* Flagship Hero Promotion Toggle */}
+                  <div className="pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300 hover:text-white">
+                      <input
+                        type="checkbox"
+                        checked={isFeaturedHero}
+                        onChange={(e) => setIsFeaturedHero(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded text-amber-500 bg-zinc-950 border-zinc-800 cursor-pointer"
+                      />
+                      <span>Promote as Arena Hero Banner (Featured Flagship)</span>
+                    </label>
                   </div>
                 </div>
 

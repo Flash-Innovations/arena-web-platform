@@ -419,14 +419,14 @@ export function ArenaLobbyPage() {
 
           <div className="flex items-center gap-2.5 shrink-0 z-10">
             <Link
-              to={featuredContest.slug === 'flash-coding-series-2026' ? '/series' : `/contest/${featuredContest.slug}`}
+              to="/series"
               className="px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700/80 transition-colors flex items-center gap-1"
             >
               <span>Tournament Hub</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
             <Link
-              to={featuredContest.slug === 'flash-coding-series-2026' ? '/series/quiz' : `/contest/${featuredContest.slug}`}
+              to={featuredContest.stages?.[0]?.stageType === 'MCQ_QUIZ' ? '/series/quiz' : `/contest/${featuredContest.slug}`}
               className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
             >
               Enter Stage
