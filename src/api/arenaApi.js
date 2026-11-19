@@ -54,7 +54,7 @@ export const setArenaToken = (token) => {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('arena_user');
     }
-  } catch (e) {}
+  } catch (e) { }
 };
 
 async function arenaRequest(endpoint, options = {}) {
