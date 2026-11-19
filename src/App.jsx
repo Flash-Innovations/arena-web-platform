@@ -136,7 +136,17 @@ export function App() {
             </>
           }
         />
-        <Route path="/profile" element={<Navigate to="/u/me" replace />} />
+        <Route
+          path="/profile"
+          element={
+            <>
+              <ArenaNavbar />
+              <main className="flex-1">
+                <GladiatorProfilePage />
+              </main>
+            </>
+          }
+        />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

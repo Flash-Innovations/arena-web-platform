@@ -101,6 +101,7 @@ export function GladiatorProfilePage() {
 
   const isOwner = Boolean(
     profileData?.isOwner ||
+    (!username || username === 'me') ||
     (currentUser && (currentUser.id === profile?.id || currentUser._id === profile?.id || currentUser.username === profile?.username))
   );
 

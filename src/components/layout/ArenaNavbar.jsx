@@ -88,7 +88,7 @@ export function ArenaNavbar() {
 
               {/* User Pill */}
               <Link
-                to={`/u/${user?.username || user?.id || 'me'}`}
+                to="/profile"
                 title="View Gladiator Profile & Placement Passport"
                 className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-xs font-medium text-zinc-200 transition-colors"
               >
