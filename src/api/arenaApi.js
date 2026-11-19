@@ -149,7 +149,13 @@ export const arenaApi = {
     }),
 
   requestRematch: (roomCode) =>
-    arenaRequest(`/api/arena/battle/${roomCode}/rematch`, { method: 'POST' }),
+    arenaRequest(`/api/arena/battle/${roomCode}/rematch/request`, { method: 'POST' }),
+
+  acceptRematch: (roomCode) =>
+    arenaRequest(`/api/arena/battle/${roomCode}/rematch/accept`, { method: 'POST' }),
+
+  declineRematch: (roomCode) =>
+    arenaRequest(`/api/arena/battle/${roomCode}/rematch/decline`, { method: 'POST' }),
 
   forfeitMatch: (roomCode) =>
     arenaRequest(`/api/arena/battle/${roomCode}/forfeit`, { method: 'POST' }),

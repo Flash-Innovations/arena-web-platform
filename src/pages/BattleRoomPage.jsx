@@ -46,6 +46,7 @@ export function BattleRoomPage() {
   const [opponentProgress, setOpponentProgress] = useState(null);
   const [timeRemainingSeconds, setTimeRemainingSeconds] = useState(null);
   const [isVictoryModalOpen, setIsVictoryModalOpen] = useState(false);
+  const [rematch, setRematch] = useState(null);
   const [isWinner, setIsWinner] = useState(false);
   const [winReason, setWinReason] = useState(null);
   const [ratingChange, setRatingChange] = useState(null);
@@ -107,11 +108,13 @@ export function BattleRoomPage() {
           if (res.isExpired || ['COMPLETED', 'FORFEIT', 'WALKOVER', 'EXPIRED'].includes(res.match?.status)) {
             setIsRoomExpired(true);
             setMatch(res.match);
+            if (res.match?.rematch) setRematch(res.match.rematch);
             setWinReason(res.winReason || res.match?.winReason);
             return;
           }
 
           setMatch(res.match);
+          if (res.match?.rematch) setRematch(res.match.rematch);
           setProblem(res.problem);
 
           // Restore code from session cache or problem starter code
@@ -204,9 +207,50 @@ export function BattleRoomPage() {
         setMatch(data.match);
         arenaSound.playTone(660, 'sine', 0.15, 0.2);
         arenaSound.announce('Challenger connected to chamber');
+      } else if (data.type === 'REMATCH_REQUESTED') {
+        setRematch({
+          status: 'REQUESTED',
+          requestedBy: data.requestedBy,
+          requestedByName: data.requestedByName
+        });
+        arenaSound.playTone(520, 'triangle', 0.2, 0.3);
+        arenaSound.announce('Rematch requested by opponent');
+      } else if (data.type === 'REMATCH_ACCEPTED') {
+        setRematch({
+          status: 'ACCEPTED',
+          newRoomCode: data.newRoomCode
+        });
+        if (data.newRoomCode && data.newRoomCode !== roomCode) {
+          window.location.href = `/battle/${data.newRoomCode}`;
+        }
+      } else if (data.type === 'REMATCH_DECLINED') {
+        setRematch({
+          status: 'DECLINED'
+        });
+        arenaSound.announce('Rematch declined');
       } else if (data.type === 'REMATCH_REDIRECT' && data.rematchRoomCode) {
         window.location.href = `/battle/${data.rematchRoomCode}`;
       }
+    });
+
+    socket.on('rematch_requested', (data) => {
+      setRematch({
+        status: 'REQUESTED',
+        requestedBy: data?.requestedBy,
+        requestedByName: data?.requestedByName
+      });
+      arenaSound.announce('Rematch requested by opponent');
+    });
+
+    socket.on('rematch_accepted', ({ newRoomCode }) => {
+      if (newRoomCode && newRoomCode !== roomCode) {
+        window.location.href = `/battle/${newRoomCode}`;
+      }
+    });
+
+    socket.on('rematch_declined', () => {
+      setRematch({ status: 'DECLINED' });
+      arenaSound.announce('Rematch declined');
     });
 
     socket.on('match_completed', (data) => {
@@ -264,6 +308,9 @@ export function BattleRoomPage() {
       socket.off('match_updated');
       socket.off('match_completed');
       socket.off('rematch_redirect');
+      socket.off('rematch_requested');
+      socket.off('rematch_accepted');
+      socket.off('rematch_declined');
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -359,6 +406,31 @@ export function BattleRoomPage() {
 
     return () => clearInterval(interval);
   }, [roomCode, match, tabBlurViolations, currentUserId, isRoomExpired]);
+
+  // 7b. Post-Match Rematch Handshake Heartbeat (Every 3s when victory modal is open)
+  useEffect(() => {
+    if (!isVictoryModalOpen || !roomCode) return;
+
+    const interval = setInterval(() => {
+      arenaApi.sendHeartbeat(roomCode, tabBlurViolations)
+        .then((res) => {
+          if (res && res.success) {
+            if (res.rematch) {
+              setRematch(res.rematch);
+              if (res.rematch.status === 'ACCEPTED' && res.rematch.newRoomCode && res.rematch.newRoomCode !== roomCode) {
+                window.location.href = `/battle/${res.rematch.newRoomCode}`;
+              }
+            }
+            if (res.rematchRoomCode && res.rematchRoomCode !== roomCode) {
+              window.location.href = `/battle/${res.rematchRoomCode}`;
+            }
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isVictoryModalOpen, roomCode, tabBlurViolations]);
 
   // 8. Match Countdown Timer (Chess Clock)
   useEffect(() => {
@@ -1106,6 +1178,10 @@ export function BattleRoomPage() {
         match={match}
         ratingChange={ratingChange}
         newRating={newRating}
+        onPlayAgain={() => navigate('/')}
+        rematchState={rematch}
+        currentUserId={currentUserId}
+        onRematchUpdate={(newRematch) => setRematch(newRematch)}
       />
     </div>
   );
