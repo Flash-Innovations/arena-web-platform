@@ -91,13 +91,6 @@ export function ArenaLobbyPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Cleanup matchmaking timer on unmount
-  useEffect(() => {
-    return () => {
-      if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
-    };
-  }, []);
-
   const handleJoin = (e) => {
     e.preventDefault();
     if (roomCodeInput.trim()) {
