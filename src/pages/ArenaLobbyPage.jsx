@@ -22,11 +22,21 @@ import {
 import CreateBattleModal from '../components/battle/CreateBattleModal';
 import GladiatorBadge from '../components/common/GladiatorBadge';
 import { useAuth } from '../context/AuthContext';
+import { useMatchmaking } from '../context/MatchmakingContext';
 import arenaApi from '../api/arenaApi';
 
 export function ArenaLobbyPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const {
+    isMatchmaking,
+    matchmakingQueueType,
+    searchTimer,
+    matchmakingError,
+    startMatchmaking,
+    cancelMatchmaking,
+    acceptAiSparring
+  } = useMatchmaking();
 
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -36,26 +46,6 @@ export function ArenaLobbyPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [queueFilter, setQueueFilter] = useState('ALL'); // 'ALL' | 'RANKED' | 'CASUAL'
-
-  // Fast Matchmaking Queue State
-  const [isMatchmaking, setIsMatchmaking] = useState(false);
-  const [matchmakingQueueType, setMatchmakingQueueType] = useState('RANKED');
-  const [searchTimer, setSearchTimer] = useState(0);
-  const [matchmakingError, setMatchmakingError] = useState(null);
-  const searchIntervalRef = useRef(null);
-  const pollIntervalRef = useRef(null);
-  const activeWaitingRoomCodeRef = useRef(null);
-
-  // Clean up any active waiting lobbies when leaving page
-  useEffect(() => {
-    return () => {
-      if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-      if (activeWaitingRoomCodeRef.current) {
-        arenaApi.cancelMatchmake(activeWaitingRoomCodeRef.current).catch(() => {});
-      }
-    };
-  }, []);
 
   useEffect(() => {
     async function loadLobbyData() {
@@ -115,103 +105,7 @@ export function ArenaLobbyPage() {
     }
   };
 
-  // Start Fast Matchmaking Queue
-  const startMatchmaking = async (queueType = 'RANKED') => {
-    if (!isAuthenticated) {
-      openAuthModal({
-        mode: 'signin',
-        title: 'Sign In to Enter Arena Queue',
-        message: 'Sign in with your student account to record match statistics and Gladiator Tier rankings.'
-      });
-      return;
-    }
-
-    // Cancel any prior waiting lobby or poll interval
-    if (activeWaitingRoomCodeRef.current) {
-      arenaApi.cancelMatchmake(activeWaitingRoomCodeRef.current).catch(() => {});
-      activeWaitingRoomCodeRef.current = null;
-    }
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-
-    setIsMatchmaking(true);
-    setMatchmakingQueueType(queueType);
-    setSearchTimer(0);
-    setMatchmakingError(null);
-
-    // Start UI timer
-    if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
-    searchIntervalRef.current = setInterval(() => {
-      setSearchTimer((prev) => prev + 1);
-    }, 1000);
-
-    try {
-      const res = await arenaApi.matchmake({
-        queueType,
-        gameMode: 'SPEED_DSA',
-        difficulty: 'MEDIUM'
-      });
-
-      if (res.success && res.roomCode) {
-        if (res.matched) {
-          // Immediately found active opponent
-          if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          activeWaitingRoomCodeRef.current = null;
-          navigate(`/battle/${res.roomCode}`);
-        } else {
-          // Waiting in queue: Poll until opponent enters
-          activeWaitingRoomCodeRef.current = res.roomCode;
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = setInterval(async () => {
-            try {
-              const checkRes = await arenaApi.getMatch(res.roomCode);
-              if (checkRes.success && checkRes.match && checkRes.match.status !== 'WAITING_FOR_OPPONENT') {
-                clearInterval(pollIntervalRef.current);
-                pollIntervalRef.current = null;
-                activeWaitingRoomCodeRef.current = null;
-                if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
-                navigate(`/battle/${res.roomCode}`);
-              }
-            } catch (err) {}
-          }, 2000);
-        }
-      }
-    } catch (err) {
-      const msg = err.message || '';
-      if (err.status === 401 || msg.toLowerCase().includes('auth')) {
-        openAuthModal({
-          mode: 'signin',
-          title: 'Sign In to Enter Arena Queue',
-          message: 'Your session has expired. Please sign in to enter matchmaking.'
-        });
-      } else {
-        setMatchmakingError(msg || 'Matchmaking error. Please retry.');
-      }
-      cancelMatchmaking();
-    }
-  };
-
-  const cancelMatchmaking = () => {
-    setIsMatchmaking(false);
-    setSearchTimer(0);
-    if (searchIntervalRef.current) {
-      clearInterval(searchIntervalRef.current);
-      searchIntervalRef.current = null;
-    }
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-    if (activeWaitingRoomCodeRef.current) {
-      arenaApi.cancelMatchmake(activeWaitingRoomCodeRef.current).catch(() => {});
-      activeWaitingRoomCodeRef.current = null;
-    }
-  };
-
-  // Trigger AI Rival Fallback
+  // Direct AI Sparring launcher
   const spawnAiRival = async () => {
     if (!isAuthenticated) {
       openAuthModal({
@@ -223,7 +117,6 @@ export function ArenaLobbyPage() {
     }
 
     try {
-      cancelMatchmaking();
       const res = await arenaApi.createAiRivalMatch({
         gameMode: 'SPEED_DSA',
         difficulty: 'MEDIUM'
@@ -241,7 +134,6 @@ export function ArenaLobbyPage() {
         });
         return;
       }
-      setMatchmakingError(msg || 'Failed to initialize AI Rival sparring session.');
     }
   };
 
@@ -326,19 +218,30 @@ export function ArenaLobbyPage() {
 
           <div className="pt-2 flex items-center gap-2">
             {isMatchmaking && matchmakingQueueType === 'RANKED' ? (
-              <div className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900 border border-amber-500/50">
+              <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-amber-500/50">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
                   <span className="text-xs font-mono text-zinc-200">
                     Searching pool... {String(Math.floor(searchTimer / 60)).padStart(2, '0')}:{String(searchTimer % 60).padStart(2, '0')}
                   </span>
                 </div>
-                <button
-                  onClick={cancelMatchmaking}
-                  className="text-xs font-mono text-zinc-400 hover:text-rose-400 cursor-pointer"
-                >
-                  Cancel
-                </button>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {searchTimer >= 60 && (
+                    <button
+                      onClick={acceptAiSparring}
+                      className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 cursor-pointer transition-colors"
+                      title="Play against AI while searching continues in background"
+                    >
+                      Spar AI in BG
+                    </button>
+                  )}
+                  <button
+                    onClick={cancelMatchmaking}
+                    className="text-xs font-mono text-zinc-400 hover:text-rose-400 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -378,19 +281,30 @@ export function ArenaLobbyPage() {
 
           <div className="pt-2 flex items-center gap-2">
             {isMatchmaking && matchmakingQueueType === 'CASUAL' ? (
-              <div className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900 border border-blue-500/50">
+              <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-blue-500/50">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
                   <span className="text-xs font-mono text-zinc-200">
                     Searching pool... {String(Math.floor(searchTimer / 60)).padStart(2, '0')}:{String(searchTimer % 60).padStart(2, '0')}
                   </span>
                 </div>
-                <button
-                  onClick={cancelMatchmaking}
-                  className="text-xs font-mono text-zinc-400 hover:text-rose-400 cursor-pointer"
-                >
-                  Cancel
-                </button>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {searchTimer >= 60 && (
+                    <button
+                      onClick={acceptAiSparring}
+                      className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 cursor-pointer transition-colors"
+                      title="Play against AI while searching continues in background"
+                    >
+                      Spar AI in BG
+                    </button>
+                  )}
+                  <button
+                    onClick={cancelMatchmaking}
+                    className="text-xs font-mono text-zinc-400 hover:text-rose-400 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -413,20 +327,26 @@ export function ArenaLobbyPage() {
         </div>
       </div>
 
-      {/* AI Rival Fallback Notice Bar (Visible during long queue) */}
-      {isMatchmaking && searchTimer >= 30 && (
-        <div className="p-3.5 rounded-lg bg-zinc-900/90 border border-amber-500/40 flex items-center justify-between gap-3 animate-pulse">
-          <div className="flex items-center gap-2 text-xs text-zinc-300">
-            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              Queue timeout threshold approaching. Would you like to enter instant practice against an AI Rival?
-            </span>
+      {/* AI Rival Background Sparring Notice Bar (Visible when queue reaches >= 60s) */}
+      {isMatchmaking && searchTimer >= 60 && (
+        <div className="p-4 rounded-xl bg-blue-950/40 border border-blue-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3 text-xs text-blue-200">
+            <Bot className="w-5 h-5 text-blue-400 shrink-0 animate-pulse" />
+            <div>
+              <div className="font-bold text-zinc-100 text-sm">
+                Queue reached 1 minute ({searchTimer}s). Spar with AI while searching?
+              </div>
+              <div className="text-zinc-400 text-xs mt-0.5">
+                Play a casual practice duel against an AI Neural Rival. Matchmaking will keep running in the background and pop up the moment a human match is found.
+              </div>
+            </div>
           </div>
           <button
-            onClick={spawnAiRival}
-            className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shrink-0 cursor-pointer"
+            onClick={acceptAiSparring}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shrink-0 cursor-pointer flex items-center gap-1.5 transition-colors shadow-md shadow-blue-600/30"
           >
-            Spawn AI Rival
+            <Bot className="w-4 h-4" />
+            <span>Spar AI While Queueing</span>
           </button>
         </div>
       )}

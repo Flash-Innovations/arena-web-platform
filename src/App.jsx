@@ -1,7 +1,11 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { MatchmakingProvider } from './context/MatchmakingContext';
 import { AuthModal } from './components/auth/AuthModal';
+import { MatchFoundModal } from './components/battle/MatchFoundModal';
+import { AiSparringOfferModal } from './components/battle/AiSparringOfferModal';
+import { BackgroundQueuePill } from './components/battle/BackgroundQueuePill';
 import { ArenaNavbar } from './components/layout/ArenaNavbar';
 import { ArenaLobbyPage } from './pages/ArenaLobbyPage';
 import { BattleRoomPage } from './pages/BattleRoomPage';
@@ -17,8 +21,10 @@ import { GladiatorProfilePage } from './pages/GladiatorProfilePage';
 export function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-        <Routes>
+      <MatchmakingProvider>
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+          <BackgroundQueuePill />
+          <Routes>
         {/* Main Lobby */}
         <Route
           path="/"
@@ -151,8 +157,11 @@ export function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <AuthModal />
-    </div>
+        <AuthModal />
+        <MatchFoundModal />
+        <AiSparringOfferModal />
+      </div>
+    </MatchmakingProvider>
   </AuthProvider>
   );
 }
