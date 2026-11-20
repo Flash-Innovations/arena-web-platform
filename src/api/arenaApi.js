@@ -112,6 +112,12 @@ export const arenaApi = {
   matchmake: (payload) =>
     arenaRequest('/api/arena/battle/matchmake', { method: 'POST', body: JSON.stringify(payload) }),
 
+  cancelMatchmake: (roomCode) =>
+    arenaRequest('/api/arena/battle/matchmake/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ roomCode })
+    }),
+
   createAiRivalMatch: (payload) =>
     arenaRequest('/api/arena/battle/ai-rival', { method: 'POST', body: JSON.stringify(payload) }),
 

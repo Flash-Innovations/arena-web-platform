@@ -43,6 +43,19 @@ export function ArenaLobbyPage() {
   const [searchTimer, setSearchTimer] = useState(0);
   const [matchmakingError, setMatchmakingError] = useState(null);
   const searchIntervalRef = useRef(null);
+  const pollIntervalRef = useRef(null);
+  const activeWaitingRoomCodeRef = useRef(null);
+
+  // Clean up any active waiting lobbies when leaving page
+  useEffect(() => {
+    return () => {
+      if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (activeWaitingRoomCodeRef.current) {
+        arenaApi.cancelMatchmake(activeWaitingRoomCodeRef.current).catch(() => {});
+      }
+    };
+  }, []);
 
   useEffect(() => {
     async function loadLobbyData() {
@@ -113,6 +126,16 @@ export function ArenaLobbyPage() {
       return;
     }
 
+    // Cancel any prior waiting lobby or poll interval
+    if (activeWaitingRoomCodeRef.current) {
+      arenaApi.cancelMatchmake(activeWaitingRoomCodeRef.current).catch(() => {});
+      activeWaitingRoomCodeRef.current = null;
+    }
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+
     setIsMatchmaking(true);
     setMatchmakingQueueType(queueType);
     setSearchTimer(0);
@@ -133,21 +156,27 @@ export function ArenaLobbyPage() {
 
       if (res.success && res.roomCode) {
         if (res.matched) {
-          // Immediately found opponent
+          // Immediately found active opponent
           if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          activeWaitingRoomCodeRef.current = null;
           navigate(`/battle/${res.roomCode}`);
         } else {
-          // Waiting in queue: Poll or wait for opponent join
-          const pollInterval = setInterval(async () => {
+          // Waiting in queue: Poll until opponent enters
+          activeWaitingRoomCodeRef.current = res.roomCode;
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = setInterval(async () => {
             try {
               const checkRes = await arenaApi.getMatch(res.roomCode);
               if (checkRes.success && checkRes.match && checkRes.match.status !== 'WAITING_FOR_OPPONENT') {
-                clearInterval(pollInterval);
+                clearInterval(pollIntervalRef.current);
+                pollIntervalRef.current = null;
+                activeWaitingRoomCodeRef.current = null;
                 if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
                 navigate(`/battle/${res.roomCode}`);
               }
             } catch (err) {}
-          }, 2500);
+          }, 2000);
         }
       }
     } catch (err) {
@@ -168,7 +197,18 @@ export function ArenaLobbyPage() {
   const cancelMatchmaking = () => {
     setIsMatchmaking(false);
     setSearchTimer(0);
-    if (searchIntervalRef.current) clearInterval(searchIntervalRef.current);
+    if (searchIntervalRef.current) {
+      clearInterval(searchIntervalRef.current);
+      searchIntervalRef.current = null;
+    }
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (activeWaitingRoomCodeRef.current) {
+      arenaApi.cancelMatchmake(activeWaitingRoomCodeRef.current).catch(() => {});
+      activeWaitingRoomCodeRef.current = null;
+    }
   };
 
   // Trigger AI Rival Fallback
@@ -337,19 +377,38 @@ export function ArenaLobbyPage() {
           </div>
 
           <div className="pt-2 flex items-center gap-2">
-            <button
-              onClick={() => startMatchmaking('CASUAL')}
-              className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-xs transition-colors border border-zinc-700 cursor-pointer"
-            >
-              Casual Queue
-            </button>
-            <button
-              onClick={spawnAiRival}
-              className="flex-1 py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-            >
-              <Bot className="w-3.5 h-3.5" />
-              <span>Spar vs AI Rival</span>
-            </button>
+            {isMatchmaking && matchmakingQueueType === 'CASUAL' ? (
+              <div className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-900 border border-blue-500/50">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                  <span className="text-xs font-mono text-zinc-200">
+                    Searching pool... {String(Math.floor(searchTimer / 60)).padStart(2, '0')}:{String(searchTimer % 60).padStart(2, '0')}
+                  </span>
+                </div>
+                <button
+                  onClick={cancelMatchmaking}
+                  className="text-xs font-mono text-zinc-400 hover:text-rose-400 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => startMatchmaking('CASUAL')}
+                  className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-xs transition-colors border border-zinc-700 cursor-pointer"
+                >
+                  Casual Queue
+                </button>
+                <button
+                  onClick={spawnAiRival}
+                  className="flex-1 py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>Spar vs AI Rival</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
