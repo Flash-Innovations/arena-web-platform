@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Timer, Radio, Flag, Wifi, WifiOff, Volume2, VolumeX, Mic, MicOff } from 'lucide-react';
+import { Timer, Radio, Flag, Wifi, WifiOff, Volume2, VolumeX, Mic, MicOff, Zap } from 'lucide-react';
 import arenaSound from '../../services/arenaSoundService';
 
 export function BattleHUD({
   match,
   opponentProgress,
+  myWpm = 0,
   timeRemainingSeconds,
   opponentStatus = 'ONLINE',
   disconnectGraceSeconds = null,
@@ -74,6 +75,12 @@ export function BattleHUD({
               <span className="text-[11px] font-mono font-bold text-zinc-400">
                 {p1Passed}/{p1Total}
               </span>
+              {myWpm > 0 && (
+                <span className="text-[10px] font-mono font-bold text-blue-400 flex items-center gap-0.5 bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/30">
+                  <Zap className="w-2.5 h-2.5 text-blue-400" />
+                  <span>{myWpm} WPM</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {renderSegmentedDots(p1Passed, p1Total)}
@@ -154,6 +161,16 @@ export function BattleHUD({
         <div className="flex items-center gap-3 w-1/3 min-w-0 justify-end text-right">
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-end gap-2">
+              {opponentProgress?.isTyping && (opponentProgress?.wpm || 0) > 0 ? (
+                <span className="text-[10px] font-mono font-bold text-amber-400 flex items-center gap-0.5 bg-amber-400/10 px-1.5 py-0.2 rounded border border-amber-400/30 animate-pulse">
+                  <Zap className="w-2.5 h-2.5 text-amber-400" />
+                  <span>{opponentProgress.wpm} WPM</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
+                  {opponentStatus === 'DISCONNECTED' ? 'Offline' : 'Idle'}
+                </span>
+              )}
               <span className="text-[11px] font-mono font-bold text-zinc-400">
                 {p2Passed}/{p2Total}
               </span>

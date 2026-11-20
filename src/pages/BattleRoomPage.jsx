@@ -74,6 +74,11 @@ export function BattleRoomPage() {
   const lastStrikeTimestampRef = useRef(0);
   const hasEnteredFullscreenRef = useRef(false);
 
+  // Live Typing Speed (WPM) Telemetry
+  const [myWpm, setMyWpm] = useState(0);
+  const keystrokesInWindowRef = useRef(0);
+  const lastKeystrokeTimeRef = useRef(0);
+
   // Responsive mobile screen detector
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -467,11 +472,9 @@ export function BattleRoomPage() {
     return () => clearInterval(timer);
   }, [disconnectGraceSeconds]);
 
-  // 10. Compulsory Fullscreen Exit & Tab Blur Tracking (Anti-Cheat 3-Strike System)
+  // 10. Compulsory Fullscreen Exit & Tab Blur Tracking (Anti-Cheat 3-Strike System across ALL Duels)
   useEffect(() => {
     if (!isCompetitor || match?.status !== 'IN_PROGRESS') return;
-
-    const isRanked = (match?.queueType === 'RANKED' || match?.queueType === 'CONTEST_STAGE') && !match?.isAiRival;
 
     const recordStrike = (eventType, reason) => {
       const now = Date.now();
@@ -500,14 +503,26 @@ export function BattleRoomPage() {
           });
         } else if (next >= 3) {
           arenaSound.playDefeat();
-          arenaSound.announce(isRanked ? 'Disqualified for malpractice' : 'Multiple focus warnings detected');
+          arenaSound.announce('Disqualified for malpractice');
+          setStrikeWarning({
+            strike: Math.min(3, next),
+            message: 'You have been disqualified for exceeding the anti-cheat tab-switching limit (3/3 strikes).'
+          });
+
+          // Disqualify immediately on client across ALL duel formats
+          setIsWinner(false);
+          setWinReason('MALPRACTICE_DISQUALIFIED');
+          setIsVictoryModalOpen(true);
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
         }
 
         arenaApi.reportAntiCheat(roomCode, {
           eventType,
           details: { strikeNumber: next, reason, timestamp: Date.now() }
         }).then((res) => {
-          if (res && res.disqualified && isRanked) {
+          if (res && res.disqualified) {
             setIsWinner(false);
             setWinReason('MALPRACTICE_DISQUALIFIED');
             setIsVictoryModalOpen(true);
@@ -574,23 +589,71 @@ export function BattleRoomPage() {
     };
   }, [roomCode, isCompetitor, match?.status]);
 
-  // 11. AI Rival Sparring Progress Simulation
+  // 11. Live Typing Speed (WPM) Broadcast to Opponent
+  useEffect(() => {
+    if (!isCompetitor || match?.status !== 'IN_PROGRESS') return;
+
+    const wpmInterval = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastType = (now - lastKeystrokeTimeRef.current) / 1000;
+      const isTyping = timeSinceLastType < 2.2 && keystrokesInWindowRef.current > 0;
+
+      let currentWpm = 0;
+      if (isTyping) {
+        currentWpm = Math.min(180, Math.round((keystrokesInWindowRef.current / 5) / (1.2 / 60)));
+      }
+      setMyWpm(currentWpm);
+      keystrokesInWindowRef.current = 0;
+
+      const socket = getSocket();
+      if (socket && socket.connected) {
+        socket.emit('code_progress', {
+          roomCode,
+          userId: currentUserId,
+          wpm: currentWpm,
+          isTyping,
+          testCasesPassed: isP1 ? (match?.player1?.testCasesPassed || 0) : (match?.player2?.testCasesPassed || 0),
+          totalTestCases: problem?.testCases?.length || 5,
+          codeLength: (code || '').trim().length
+        });
+      }
+    }, 1200);
+
+    return () => clearInterval(wpmInterval);
+  }, [roomCode, currentUserId, isCompetitor, match?.status, code, problem?.testCases?.length, isP1]);
+
+  // 12. AI Rival Sparring Progress & Typing Simulation
   useEffect(() => {
     if (!match?.isAiRival || match?.status !== 'IN_PROGRESS') return;
 
     const totalTests = problem?.testCases?.length || 5;
     let aiPassed = 0;
 
+    // Simulate AI typing cadence (65-88 WPM with thinking pauses)
+    const aiWpmInterval = setInterval(() => {
+      const isTyping = Math.random() > 0.25;
+      const simulatedWpm = isTyping ? Math.floor(65 + Math.random() * 25) : 0;
+      setOpponentProgress((prev) => ({
+        ...(prev || {}),
+        testCasesPassed: aiPassed,
+        totalTestCases: totalTests,
+        wpm: simulatedWpm,
+        isTyping
+      }));
+    }, 1400);
+
     const aiInterval = setInterval(() => {
       aiPassed = Math.min(totalTests, aiPassed + 1);
-      setOpponentProgress({
+      setOpponentProgress((prev) => ({
+        ...(prev || {}),
         testCasesPassed: aiPassed,
         totalTestCases: totalTests,
         codeLength: 120 + aiPassed * 45
-      });
+      }));
 
       if (aiPassed >= totalTests && match.status === 'IN_PROGRESS') {
         clearInterval(aiInterval);
+        clearInterval(aiWpmInterval);
         setIsWinner(false);
         setWinReason('FIRST_AC');
         setIsVictoryModalOpen(true);
@@ -600,7 +663,10 @@ export function BattleRoomPage() {
       }
     }, 18000 + Math.random() * 8000);
 
-    return () => clearInterval(aiInterval);
+    return () => {
+      clearInterval(aiInterval);
+      clearInterval(aiWpmInterval);
+    };
   }, [match?.isAiRival, match?.status, problem?.testCases?.length]);
 
   const handleCheckIn = async () => {
@@ -639,6 +705,14 @@ export function BattleRoomPage() {
     } catch (err) {
       setErrorMsg(err.message || 'Check-in failed.');
     }
+  };
+
+  const handleCodeChange = (newCode) => {
+    const nextVal = newCode || '';
+    const diff = Math.abs(nextVal.length - (code || '').length);
+    keystrokesInWindowRef.current += Math.max(1, diff);
+    lastKeystrokeTimeRef.current = Date.now();
+    setCode(nextVal);
   };
 
   const handleRunTests = async () => {
@@ -851,9 +925,11 @@ export function BattleRoomPage() {
             </div>
             <div>
               <span className="text-[10px] font-mono uppercase tracking-widest text-rose-400 font-bold">
-                Malpractice Strike {strikeWarning.strike}/3
+                {strikeWarning.strike >= 3 ? 'Match Disqualified • 3/3 Strikes' : `Malpractice Strike ${strikeWarning.strike}/3`}
               </span>
-              <h2 className="text-lg font-bold text-zinc-100 mt-1">Anti-Cheat Alert</h2>
+              <h2 className="text-lg font-bold text-zinc-100 mt-1">
+                {strikeWarning.strike >= 3 ? 'Disqualified for Malpractice' : 'Anti-Cheat Alert'}
+              </h2>
               <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
                 {strikeWarning.message}
               </p>
@@ -861,13 +937,17 @@ export function BattleRoomPage() {
             <button
               onClick={() => {
                 setStrikeWarning(null);
-                if (!document.fullscreenElement) {
+                if (strikeWarning.strike >= 3) {
+                  setIsWinner(false);
+                  setWinReason('MALPRACTICE_DISQUALIFIED');
+                  setIsVictoryModalOpen(true);
+                } else if (!document.fullscreenElement) {
                   document.documentElement.requestFullscreen().catch(() => {});
                 }
               }}
               className="w-full py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
             >
-              I Understand &amp; Return to Duel
+              {strikeWarning.strike >= 3 ? 'View Match Outcome' : 'I Understand & Return to Duel'}
             </button>
           </div>
         </div>
@@ -877,6 +957,7 @@ export function BattleRoomPage() {
       <BattleHUD
         match={match}
         opponentProgress={opponentProgress}
+        myWpm={myWpm}
         timeRemainingSeconds={timeRemainingSeconds}
         opponentStatus={opponentStatus}
         disconnectGraceSeconds={disconnectGraceSeconds}
@@ -1150,7 +1231,7 @@ export function BattleRoomPage() {
           <div className="lg:col-span-7 flex flex-col min-h-[460px] h-[calc(100vh-100px)]">
             <CodeEditor
               code={code}
-              onChange={(newCode) => setCode(newCode || '')}
+              onChange={handleCodeChange}
               language={language}
               onLanguageChange={(newLang) => {
                 setLanguage(newLang);
